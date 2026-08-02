@@ -1,0 +1,6 @@
+{
+  "name": "C³ — Code • Compile • Conquer",
+  "description": "Hardware Description Language (Verilog) contest and judging platform",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
