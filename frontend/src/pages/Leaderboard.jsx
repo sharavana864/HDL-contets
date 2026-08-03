@@ -12,15 +12,25 @@ export default function Leaderboard() {
     api.get(`/contests/${contestId}/leaderboard`).then((res) => setRows(res.data.leaderboard));
   }, [contestId]);
 
-  // Live updates: merge each incoming delta into local state instead of refetching.
   useContestSocket({
     contestId,
     onLeaderboardUpdate: (update) => {
       setRows((prev) => {
         const idx = prev.findIndex((r) => r.participant_id === update.participantId);
-        const merged = { ...prev[idx], total_score: update.totalScore, status: update.status, name: update.name, participant_id: update.participantId };
+        const merged = {
+          ...prev[idx],
+          total_score: update.totalScore,
+          status: update.status,
+          name: update.name,
+          participant_id: update.participantId,
+          started_at: update.startedAt ?? prev[idx]?.started_at,
+          completed_at: update.completedAt ?? prev[idx]?.completed_at,
+          duration_seconds: update.duration_seconds ?? prev[idx]?.duration_seconds,
+        };
         if (idx === -1) return [...prev, merged];
-        const copy = [...prev]; copy[idx] = merged; return copy;
+        const copy = [...prev];
+        copy[idx] = merged;
+        return copy;
       });
     },
   });

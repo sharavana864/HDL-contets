@@ -21,13 +21,19 @@ async function resolveContestId(id) {
 export async function getLeaderboard(req, res) {
   const contestId = await resolveContestId(req.params.contestId);
   const result = await query(
-    `SELECT participant_id, name, total_score, started_at, completed_at,
-            CASE WHEN completed_at IS NOT NULL
-                 THEN EXTRACT(EPOCH FROM (completed_at - started_at))
-                 ELSE NULL END AS duration_seconds,
-            status
-     FROM leaderboard
-     WHERE contest_id = $1`,
+    `SELECT u.participant_id, u.name, cr.total_score, cr.started_at, cr.completed_at,
+            cr.status,
+            CASE
+              WHEN cr.completed_at IS NOT NULL AND cr.started_at IS NOT NULL
+                THEN ROUND(EXTRACT(EPOCH FROM (cr.completed_at - cr.started_at)))
+              WHEN cr.started_at IS NOT NULL
+                THEN ROUND(EXTRACT(EPOCH FROM (now() - cr.started_at)))
+              ELSE NULL
+            END AS duration_seconds
+     FROM contest_runs cr
+     JOIN users u ON u.id = cr.user_id
+     WHERE cr.contest_id = $1
+     ORDER BY cr.total_score DESC, duration_seconds ASC NULLS LAST`,
     [contestId]
   );
   res.json({ leaderboard: result.rows });

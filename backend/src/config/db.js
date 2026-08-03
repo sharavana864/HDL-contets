@@ -543,20 +543,40 @@ function handleInMemoryQuery(text, params = []) {
     return { rows: sub ? [sub] : [], rowCount: sub ? 1 : 0 };
   }
 
+  // --- ANALYTICS ---
+  if (sqlUpper.includes('FROM CONTEST_RUNS') && sqlUpper.includes('COUNT(*)')) {
+    const runs = memoryDb.contest_runs.filter((x) => x.contest_id === params[0]);
+    const completedRuns = runs.filter((x) => x.status === 'completed');
+    const totalScore = completedRuns.reduce((acc, r) => acc + (r.total_score || 0), 0);
+    const avgScore = completedRuns.length > 0 ? totalScore / completedRuns.length : 0;
+    return {
+      rows: [
+        {
+          total: runs.length,
+          completed: completedRuns.length,
+          in_progress: runs.filter((x) => x.status === 'in_progress').length,
+          avg_score: avgScore,
+        },
+      ],
+      rowCount: 1,
+    };
+  }
+
   // --- LEADERBOARD ---
-  if (sqlUpper.includes('FROM LEADERBOARD WHERE CONTEST_ID = $1') || (sqlUpper.includes('FROM CONTEST_RUNS') && sqlUpper.includes('LEADERBOARD'))) {
+  if (sqlUpper.includes('FROM LEADERBOARD') || (sqlUpper.includes('FROM CONTEST_RUNS') && (sqlUpper.includes('JOIN USERS') || sqlUpper.includes('PARTICIPANT_ID') || sqlUpper.includes('LEADERBOARD')))) {
     const runs = memoryDb.contest_runs.filter((r) => r.contest_id === params[0]);
     const rows = runs.map((cr) => {
       const u = memoryDb.users.find((x) => x.id === cr.user_id) || {};
       let duration_seconds = null;
-      if (cr.completed_at && cr.started_at) {
-        duration_seconds = (new Date(cr.completed_at).getTime() - new Date(cr.started_at).getTime()) / 1000;
+      if (cr.started_at) {
+        const endTime = cr.completed_at ? new Date(cr.completed_at).getTime() : Date.now();
+        duration_seconds = Math.max(0, Math.round((endTime - new Date(cr.started_at).getTime()) / 1000));
       }
       return {
         participant_id: u.participant_id,
         name: u.name,
         contest_id: cr.contest_id,
-        total_score: cr.total_score,
+        total_score: cr.total_score || 0,
         started_at: cr.started_at,
         completed_at: cr.completed_at,
         duration_seconds,
@@ -564,7 +584,7 @@ function handleInMemoryQuery(text, params = []) {
       };
     });
     rows.sort((a, b) => {
-      if (b.total_score !== a.total_score) return b.total_score - a.total_score;
+      if ((b.total_score || 0) !== (a.total_score || 0)) return (b.total_score || 0) - (a.total_score || 0);
       const da = a.duration_seconds ?? Infinity;
       const db = b.duration_seconds ?? Infinity;
       return da - db;

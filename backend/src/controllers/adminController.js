@@ -43,8 +43,8 @@ export async function getAnalytics(req, res) {
   );
 
   res.json({
-    summary: participants.rows[0],
-    perProblem: perProblem.rows,
+    summary: participants.rows[0] || { total: 0, completed: 0, in_progress: 0, avg_score: 0 },
+    perProblem: perProblem.rows || [],
   });
 }
 

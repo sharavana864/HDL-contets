@@ -80,26 +80,28 @@ export default function AdminPanel() {
         </button>
       </section>
 
-      {analytics && (
+      {analytics && analytics.summary && (
         <section className="analytics">
           <h2>Analytics</h2>
           <ul>
-            <li>Participants: {analytics.summary.total}</li>
-            <li>Completed: {analytics.summary.completed}</li>
-            <li>In progress: {analytics.summary.in_progress}</li>
-            <li>Average score: {Number(analytics.summary.avg_score || 0).toFixed(1)}</li>
+            <li>Participants: {analytics.summary?.total ?? 0}</li>
+            <li>Completed: {analytics.summary?.completed ?? 0}</li>
+            <li>In progress: {analytics.summary?.in_progress ?? 0}</li>
+            <li>Average score: {Number(analytics.summary?.avg_score || 0).toFixed(1)}</li>
           </ul>
-          <table>
-            <thead><tr><th>#</th><th>Problem</th><th>Difficulty</th><th>Passed / Attempts</th></tr></thead>
-            <tbody>
-              {analytics.perProblem.map((p) => (
-                <tr key={p.sequence_no}>
-                  <td>{p.sequence_no}</td><td>{p.title}</td><td>{p.difficulty}</td>
-                  <td>{p.passed} / {p.attempts}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {analytics.perProblem && (
+            <table>
+              <thead><tr><th>#</th><th>Problem</th><th>Difficulty</th><th>Passed / Attempts</th></tr></thead>
+              <tbody>
+                {analytics.perProblem.map((p) => (
+                  <tr key={p.sequence_no}>
+                    <td>{p.sequence_no}</td><td>{p.title}</td><td>{p.difficulty}</td>
+                    <td>{p.passed} / {p.attempts}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </section>
       )}
 
@@ -118,7 +120,7 @@ export default function AdminPanel() {
             </tr>
           </thead>
           <tbody>
-            {submissions.map((s) => (
+            {(submissions || []).map((s) => (
               <tr key={s.id} className={`row-${s.verdict}`}>
                 <td>{s.participant_id} ({s.name})</td>
                 <td>{s.problem_title}</td>

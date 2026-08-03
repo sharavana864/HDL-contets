@@ -154,11 +154,20 @@ export async function submitSolution(req, res) {
       console.error('plagiarism check failed', e)
     );
 
+    let durationSeconds = null;
+    if (updatedRun.started_at) {
+      const endTime = updatedRun.completed_at ? new Date(updatedRun.completed_at).getTime() : Date.now();
+      durationSeconds = Math.max(0, Math.round((endTime - new Date(updatedRun.started_at).getTime()) / 1000));
+    }
+
     broadcastLeaderboardUpdate(contestId, {
       participantId: req.user.participantId,
       name: req.user.name,
       totalScore: updatedRun.total_score,
       status: updatedRun.status,
+      startedAt: updatedRun.started_at,
+      completedAt: updatedRun.completed_at,
+      duration_seconds: durationSeconds,
     });
   }
 
