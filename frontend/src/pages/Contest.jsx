@@ -117,7 +117,7 @@ export default function Contest() {
         </div>
       </header>
 
-      <section className="statement" style={{ marginBottom: '1.5rem', background: '#1c202d', padding: '1.25rem', borderRadius: '8px', lineHeight: '1.6' }} dangerouslySetInnerHTML={{ __html: renderMarkdownLite(problem.statement_md) }} />
+      <section className="statement" dangerouslySetInnerHTML={{ __html: renderMarkdownLite(problem.statement_md) }} />
 
       <div className="editor-section">
         <CodeEditor value={code} onChange={setCode} readOnly={submitting} />
@@ -232,13 +232,76 @@ export default function Contest() {
   );
 }
 
-// Simple markdown renderer for problem statements
+// Enhanced markdown renderer for problem statements
 function renderMarkdownLite(md = '') {
-  return md
-    .replace(/```([\s\S]*?)```/g, (_, code) => `<pre style="background: #0d1017; padding: 0.75rem; border-radius: 6px;"><code>${escapeHtml(code)}</code></pre>`)
-    .replace(/^### (.*)$/gm, '<h4>$1</h4>')
-    .replace(/^## (.*)$/gm, '<h3>$1</h3>')
-    .replace(/\n\n/g, '</p><p>');
+  if (!md) return '';
+
+  let html = md;
+
+  // Code blocks ```...```
+  html = html.replace(/```([\s\S]*?)```/g, (_, code) => {
+    return `<pre class="statement-pre"><code>${escapeHtml(code.trim())}</code></pre>`;
+  });
+
+  // Headers ### and ##
+  html = html.replace(/^###\s+(.*)$/gm, '<h3 class="statement-h3">$1</h3>');
+  html = html.replace(/^##\s+(.*)$/gm, '<h2 class="statement-h2">$1</h2>');
+
+  // Bold **text**
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+  // Inline code `code`
+  html = html.replace(/`([^`]+)`/g, '<code class="statement-code">$1</code>');
+
+  // Unordered list items starting with - or *
+  const lines = html.split('\n');
+  let inList = false;
+  const processedLines = [];
+
+  for (let line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+      if (!inList) {
+        processedLines.push('<ul class="statement-ul">');
+        inList = true;
+      }
+      const content = trimmed.substring(2);
+      processedLines.push(`<li class="statement-li">${content}</li>`);
+    } else {
+      if (inList) {
+        processedLines.push('</ul>');
+        inList = false;
+      }
+      processedLines.push(line);
+    }
+  }
+  if (inList) {
+    processedLines.push('</ul>');
+  }
+
+  html = processedLines.join('\n');
+
+  // Paragraphs (split by double newlines)
+  const paragraphs = html.split(/\n\s*\n/);
+  html = paragraphs
+    .map((p) => {
+      const trimmed = p.trim();
+      if (!trimmed) return '';
+      if (
+        trimmed.startsWith('<h') ||
+        trimmed.startsWith('<ul') ||
+        trimmed.startsWith('<div') ||
+        trimmed.startsWith('<svg') ||
+        trimmed.startsWith('<figure') ||
+        trimmed.startsWith('<pre')
+      ) {
+        return trimmed;
+      }
+      return `<p class="statement-p">${trimmed.replace(/\n/g, '<br/>')}</p>`;
+    })
+    .join('');
+
+  return html;
 }
 function escapeHtml(s = '') {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');

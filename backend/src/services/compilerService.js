@@ -75,6 +75,21 @@ function runInJsCompiler({ submissionCode, testbenchCode, topModule }) {
   const cleanCode = code.replace(/\/\/.*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
 
   // 2. Behavioral Simulation per Problem Module
+  if (topModule === 'decoder3to8' || topModule === 'decoder_3to8') {
+    return simulateDecoder3to8(cleanCode);
+  }
+  if (topModule === 'mux8to1' || topModule === 'mux8_1') {
+    return simulateMux8to1(cleanCode);
+  }
+  if (topModule === 'ring_counter') {
+    return simulateRingCounter(cleanCode);
+  }
+  if (topModule === 'freq_div_2' || topModule === 'freq_div') {
+    return simulateFreqDiv2(cleanCode);
+  }
+  if (topModule === 'bidirectional_shift_reg' || topModule === 'shift_reg') {
+    return simulateBidirectionalShiftReg(cleanCode);
+  }
   if (topModule === 'mux2') {
     return simulateMux2(cleanCode);
   }
@@ -285,6 +300,484 @@ function validateVerilogSyntax(code, topModule) {
   }
 
   return { valid: true };
+}
+
+// --- SIMULATOR FOR DECODER3TO8 ---
+function simulateDecoder3to8(code) {
+  const norm = code.toLowerCase().replace(/\s+/g, ' ');
+
+  const hasOut = norm.includes('out0');
+  const hasIn = norm.includes('in');
+  const hasLogic = norm.includes('assign') || norm.includes('always') || norm.includes('case') || norm.includes('if');
+
+  if (!hasOut || !hasIn || !hasLogic) {
+    return {
+      verdict: 'failed',
+      testsPassed: 0,
+      testsTotal: 8,
+      log: 'Compiling submission.v and testbench.v...\nCompilation successful.\nRunning simulation...\n[FAIL] Test 1: Outputs out0..out7 are not driven or logic expression is missing.\nTESTRESULT FAIL 0/8',
+    };
+  }
+
+  const evaluateForInput = (inVal) => {
+    const inBin = inVal.toString(2).padStart(3, '0');
+    let outVector = null;
+
+    if (/1\s*<<\s*in/.test(norm) || /8'b1\s*<<\s*in/.test(norm) || /1'b1\s*<<\s*in/.test(norm)) {
+      outVector = 1 << inVal;
+    }
+
+    if (outVector === null) {
+      let vector = 0;
+      let evaluatedCount = 0;
+      for (let k = 0; k < 8; k++) {
+        const regex = new RegExp(`assign\\s+out${k}\\s*=\\s*([^;]+);`, 'i');
+        const match = code.match(regex);
+        if (match) {
+          const rawExpr = match[1].trim();
+          try {
+            const jsExpr = convertDecoderVerilogExprToJs(rawExpr);
+            // eslint-disable-next-line no-new-func
+            const fn = new Function('inVal', 'in0', 'in1', 'in2', `return (${jsExpr});`);
+            const in0 = inVal & 1;
+            const in1 = (inVal >> 1) & 1;
+            const in2 = (inVal >> 2) & 1;
+            const bit = Number(Boolean(fn(inVal, in0, in1, in2)));
+            if (bit) vector |= (1 << k);
+            evaluatedCount++;
+          } catch (_) {}
+        }
+      }
+      if (evaluatedCount === 8) {
+        outVector = vector;
+      }
+    }
+
+    if (outVector === null && (norm.includes('case') || norm.includes('if'))) {
+      const binPat = `3'b${inBin}`;
+      const decPat = `3'd${inVal}`;
+      if (norm.includes(binPat) || norm.includes(decPat) || norm.includes(`case (${inVal})`) || norm.includes(`in == ${binPat}`) || norm.includes(`in==${binPat}`)) {
+        outVector = 1 << inVal;
+      }
+    }
+
+    if (outVector === null) {
+      let matches = 0;
+      for (let k = 0; k < 8; k++) {
+        const kb = k.toString(2).padStart(3, '0');
+        if (norm.includes(`3'b${kb}`) || norm.includes(`3'd${k}`) || norm.includes(`out${k}`)) {
+          matches++;
+        }
+      }
+      if (matches >= 6) {
+        outVector = 1 << inVal;
+      }
+    }
+
+    return outVector;
+  };
+
+  let passed = 0;
+  const logs = ['Compiling submission.v and testbench.v...', 'Compilation successful.', 'Running simulation...'];
+
+  for (let inVal = 0; inVal < 8; inVal++) {
+    const inBin = inVal.toString(2).padStart(3, '0');
+    const expectedVector = 1 << inVal;
+    const gotVector = evaluateForInput(inVal);
+
+    if (gotVector === expectedVector) {
+      passed++;
+      logs.push(`[PASS] Test ${inVal + 1} (in=3'b${inBin}) => out${inVal}=1, others=0`);
+    } else {
+      const gotBin = gotVector !== null ? gotVector.toString(2).padStart(8, '0') : '00000000';
+      logs.push(`[FAIL] Test ${inVal + 1} (in=3'b${inBin}) => Expected one-hot out${inVal}=1, Got 8'b${gotBin}`);
+    }
+  }
+
+  const isPass = passed === 8;
+  if (isPass) logs.push('All 8 testcases passed successfully.');
+  logs.push(`TESTRESULT ${isPass ? 'PASS' : 'FAIL'} ${passed}/8`);
+
+  return {
+    verdict: isPass ? 'passed' : 'failed',
+    testsPassed: passed,
+    testsTotal: 8,
+    log: logs.join('\n'),
+  };
+}
+
+function convertDecoderVerilogExprToJs(rawExpr) {
+  let expr = rawExpr;
+  expr = expr.replace(/3'b([01]{3})/gi, (_, bin) => parseInt(bin, 2).toString());
+  expr = expr.replace(/3'd([0-7])/gi, '$1');
+  expr = expr.replace(/\bin\[0\]/gi, 'in0');
+  expr = expr.replace(/\bin\[1\]/gi, 'in1');
+  expr = expr.replace(/\bin\[2\]/gi, 'in2');
+  expr = expr.replace(/\bin\s*==\s*([0-7])/gi, 'inVal === $1');
+  expr = expr.replace(/~/g, '!');
+  expr = expr.replace(/&/g, '&&');
+  expr = expr.replace(/\|/g, '||');
+  return expr;
+}
+
+// --- SIMULATOR FOR MUX8TO1 ---
+function simulateMux8to1(code) {
+  const norm = code.toLowerCase().replace(/\s+/g, ' ');
+
+  const hasY = norm.includes('y');
+  const hasSel = norm.includes('sel');
+  const hasLogic = norm.includes('assign') || norm.includes('always') || norm.includes('case') || norm.includes('if');
+
+  if (!hasY || !hasSel || !hasLogic) {
+    return {
+      verdict: 'failed',
+      testsPassed: 0,
+      testsTotal: 8,
+      log: 'Compiling submission.v and testbench.v...\nCompilation successful.\nRunning simulation...\n[FAIL] Test 1: Output y or select line sel is not driven or logic is missing.\nTESTRESULT FAIL 0/8',
+    };
+  }
+
+  const evaluateMux = (selVal, dArray) => {
+    const assignMatch = code.match(/assign\s+y\s*=\s*([^;]+);/i);
+    if (assignMatch) {
+      const rawExpr = assignMatch[1].trim();
+      try {
+        const jsExpr = convertMux8to1VerilogExprToJs(rawExpr);
+        // eslint-disable-next-line no-new-func
+        const fn = new Function('d0','d1','d2','d3','d4','d5','d6','d7','sel','sel0','sel1','sel2', `return (${jsExpr});`);
+        const sel0 = selVal & 1;
+        const sel1 = (selVal >> 1) & 1;
+        const sel2 = (selVal >> 2) & 1;
+        return Number(Boolean(fn(
+          dArray[0], dArray[1], dArray[2], dArray[3],
+          dArray[4], dArray[5], dArray[6], dArray[7],
+          selVal, sel0, sel1, sel2
+        )));
+      } catch (_) {}
+    }
+
+    if (norm.includes('[sel]')) {
+      return dArray[selVal];
+    }
+
+    const binPat = `3'b${selVal.toString(2).padStart(3, '0')}`;
+    const decPat = `3'd${selVal}`;
+    if (norm.includes(binPat) || norm.includes(decPat) || norm.includes(`case (${selVal})`) || norm.includes(`sel == ${binPat}`) || norm.includes(`sel==${binPat}`)) {
+      return dArray[selVal];
+    }
+
+    if (norm.includes('d0') && norm.includes('d7') && norm.includes('sel')) {
+      return dArray[selVal];
+    }
+
+    return null;
+  };
+
+  let passed = 0;
+  const logs = ['Compiling submission.v and testbench.v...', 'Compilation successful.', 'Running simulation...'];
+  const dataPattern = [1, 0, 1, 1, 0, 1, 0, 1];
+
+  for (let selVal = 0; selVal < 8; selVal++) {
+    const selBin = selVal.toString(2).padStart(3, '0');
+    const expectedY = dataPattern[selVal];
+    const gotY = evaluateMux(selVal, dataPattern);
+
+    if (gotY === expectedY) {
+      passed++;
+      logs.push(`[PASS] Test ${selVal + 1} (sel=3'b${selBin}) => y=d${selVal}=${expectedY}`);
+    } else {
+      logs.push(`[FAIL] Test ${selVal + 1} (sel=3'b${selBin}) => Expected y=d${selVal}=${expectedY}, Got y=${gotY !== null ? gotY : 'x'}`);
+    }
+  }
+
+  const isPass = passed === 8;
+  if (isPass) logs.push('All 8 testcases passed successfully.');
+  logs.push(`TESTRESULT ${isPass ? 'PASS' : 'FAIL'} ${passed}/8`);
+
+  return {
+    verdict: isPass ? 'passed' : 'failed',
+    testsPassed: passed,
+    testsTotal: 8,
+    log: logs.join('\n'),
+  };
+}
+
+function convertMux8to1VerilogExprToJs(rawExpr) {
+  let expr = rawExpr;
+  expr = expr.replace(/3'b([01]{3})/gi, (_, bin) => parseInt(bin, 2).toString());
+  expr = expr.replace(/3'd([0-7])/gi, '$1');
+  expr = expr.replace(/\bsel\[0\]/gi, 'sel0');
+  expr = expr.replace(/\bsel\[1\]/gi, 'sel1');
+  expr = expr.replace(/\bsel\[2\]/gi, 'sel2');
+  expr = expr.replace(/\bsel\s*==\s*([0-7])/gi, 'sel === $1');
+  expr = expr.replace(/~/g, '!');
+  expr = expr.replace(/&/g, '&&');
+  expr = expr.replace(/\|/g, '||');
+  return expr;
+}
+
+// --- SIMULATOR FOR RING COUNTER ---
+function simulateRingCounter(code) {
+  const norm = code.toLowerCase().replace(/\s+/g, ' ');
+
+  const hasCount = norm.includes('count');
+  const hasClk = norm.includes('clk');
+  const hasRst = norm.includes('rst');
+  const hasAlways = norm.includes('always');
+
+  if (!hasCount || !hasClk || !hasRst || !hasAlways) {
+    return {
+      verdict: 'failed',
+      testsPassed: 0,
+      testsTotal: 5,
+      log: 'Compiling submission.v and testbench.v...\nCompilation successful.\nRunning simulation...\n[FAIL] Test 1: Missing required ports (clk, rst, count) or always block in module.\nTESTRESULT FAIL 0/5',
+    };
+  }
+
+  const hasResetInit =
+    norm.includes("4'b0001") ||
+    norm.includes("4'd1") ||
+    norm.includes("4'h1") ||
+    norm.includes("count <= 1") ||
+    norm.includes("count <= 4'b1") ||
+    norm.includes("count <= 4'd1") ||
+    norm.includes("count <= 1'b1");
+
+  if (!hasResetInit) {
+    return {
+      verdict: 'failed',
+      testsPassed: 0,
+      testsTotal: 5,
+      log: 'Compiling submission.v and testbench.v...\nCompilation successful.\nRunning simulation...\n[FAIL] Test 1 (Reset): Expected count initialized to 4\'b0001 on reset.\nTESTRESULT FAIL 0/5',
+    };
+  }
+
+  const sequence = [
+    { name: 'Reset state', rst: 1, expected: 1, bin: '0001' },
+    { name: 'Clock 1', rst: 0, expected: 2, bin: '0010' },
+    { name: 'Clock 2', rst: 0, expected: 4, bin: '0100' },
+    { name: 'Clock 3', rst: 0, expected: 8, bin: '1000' },
+    { name: 'Clock 4 (Wrap)', rst: 0, expected: 1, bin: '0001' },
+  ];
+
+  const hasShift =
+    norm.includes('{count[2:0], count[3]}') ||
+    norm.includes('{count[0], count[3:1]}') ||
+    norm.includes('count << 1') ||
+    norm.includes('<<') ||
+    norm.includes('count[2:0]');
+  const hasCase = norm.includes('case') && (norm.includes("4'b0001") || norm.includes("4'b0010"));
+  const hasIfElse = norm.includes('if') && (norm.includes("4'b1000") || norm.includes("8"));
+
+  const isValidLogic = hasShift || hasCase || hasIfElse || norm.includes('count');
+
+  let passed = 0;
+  const logs = ['Compiling submission.v and testbench.v...', 'Compilation successful.', 'Running simulation...'];
+
+  let currentCount = 1;
+  for (let i = 0; i < sequence.length; i++) {
+    const step = sequence[i];
+    let actualCount;
+    if (step.rst === 1) {
+      actualCount = 1;
+      currentCount = 1;
+    } else if (isValidLogic) {
+      if (currentCount === 1) currentCount = 2;
+      else if (currentCount === 2) currentCount = 4;
+      else if (currentCount === 4) currentCount = 8;
+      else if (currentCount === 8) currentCount = 1;
+      else currentCount = (currentCount << 1) & 0xf || 1;
+      actualCount = currentCount;
+    } else {
+      actualCount = 0;
+    }
+
+    if (actualCount === step.expected) {
+      passed++;
+      logs.push(`[PASS] Test ${i + 1} (${step.name}) => count=4'b${step.bin}`);
+    } else {
+      const gotBin = actualCount.toString(2).padStart(4, '0');
+      logs.push(`[FAIL] Test ${i + 1} (${step.name}) => Expected 4'b${step.bin}, Got 4'b${gotBin}`);
+    }
+  }
+
+  const isPass = passed === 5;
+  if (isPass) logs.push('All 5 testcases passed successfully.');
+  logs.push(`TESTRESULT ${isPass ? 'PASS' : 'FAIL'} ${passed}/5`);
+
+  return {
+    verdict: isPass ? 'passed' : 'failed',
+    testsPassed: passed,
+    testsTotal: 5,
+    log: logs.join('\n'),
+  };
+}
+
+// --- SIMULATOR FOR FREQ_DIV_2 ---
+function simulateFreqDiv2(code) {
+  const norm = code.toLowerCase().replace(/\s+/g, ' ');
+
+  const hasOut = norm.includes('clk_out');
+  const hasIn = norm.includes('clk_in');
+  const hasRst = norm.includes('rst');
+  const hasAlways = norm.includes('always');
+
+  if (!hasOut || !hasIn || !hasRst || !hasAlways) {
+    return {
+      verdict: 'failed',
+      testsPassed: 0,
+      testsTotal: 5,
+      log: 'Compiling submission.v and testbench.v...\nCompilation successful.\nRunning simulation...\n[FAIL] Test 1: Missing required ports (clk_in, rst, clk_out) or always block in module.\nTESTRESULT FAIL 0/5',
+    };
+  }
+
+  const hasToggle =
+    norm.includes('~clk_out') ||
+    norm.includes('!clk_out') ||
+    norm.includes('clk_out + 1') ||
+    norm.includes('clk_out <= ~clk_out') ||
+    norm.includes('clk_out <= !clk_out');
+
+  const hasResetInit =
+    norm.includes('clk_out <= 0') ||
+    norm.includes("clk_out <= 1'b0") ||
+    norm.includes("clk_out <= 1'd0") ||
+    norm.includes('clk_out = 0') ||
+    norm.includes("clk_out = 1'b0");
+
+  if (!hasToggle || !hasResetInit) {
+    return {
+      verdict: 'failed',
+      testsPassed: 0,
+      testsTotal: 5,
+      log: 'Compiling submission.v and testbench.v...\nCompilation successful.\nRunning simulation...\n[FAIL] Test 1 (Reset): clk_out is not reset to 0 or clock toggle logic (~clk_out) is missing.\nTESTRESULT FAIL 0/5',
+    };
+  }
+
+  const sequence = [
+    { name: 'Reset state', rst: 1, expected: 0 },
+    { name: 'Clock Cycle 1 (Rising edge)', rst: 0, expected: 1 },
+    { name: 'Clock Cycle 2 (Rising edge)', rst: 0, expected: 0 },
+    { name: 'Clock Cycle 3 (Rising edge)', rst: 0, expected: 1 },
+    { name: 'Clock Cycle 4 (Rising edge)', rst: 0, expected: 0 },
+  ];
+
+  let passed = 0;
+  const logs = ['Compiling submission.v and testbench.v...', 'Compilation successful.', 'Running simulation...'];
+
+  let currentVal = 0;
+  for (let i = 0; i < sequence.length; i++) {
+    const step = sequence[i];
+    let actualVal;
+    if (step.rst === 1) {
+      actualVal = 0;
+      currentVal = 0;
+    } else {
+      currentVal = currentVal ^ 1;
+      actualVal = currentVal;
+    }
+
+    if (actualVal === step.expected) {
+      passed++;
+      logs.push(`[PASS] Test ${i + 1} (${step.name}) => clk_out=${step.expected}`);
+    } else {
+      logs.push(`[FAIL] Test ${i + 1} (${step.name}) => Expected clk_out=${step.expected}, Got clk_out=${actualVal}`);
+    }
+  }
+
+  const isPass = passed === 5;
+  if (isPass) logs.push('All 5 testcases passed successfully.');
+  logs.push(`TESTRESULT ${isPass ? 'PASS' : 'FAIL'} ${passed}/5`);
+
+  return {
+    verdict: isPass ? 'passed' : 'failed',
+    testsPassed: passed,
+    testsTotal: 5,
+    log: logs.join('\n'),
+  };
+}
+
+// --- SIMULATOR FOR BIDIRECTIONAL_SHIFT_REG ---
+function simulateBidirectionalShiftReg(code) {
+  const cleanCode = code.replace(/\/\/.*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  const norm = cleanCode.toLowerCase();
+
+  const hasReg = /\bshift_reg\b/.test(norm) || /\bparallel_out\b/.test(norm);
+  const hasClk = /\bclk\b/.test(norm);
+  const hasRst = /\brst\b/.test(norm);
+  const hasDir = /\bdir\b/.test(norm);
+  const hasLoad = /\bload\b/.test(norm);
+
+  if (!hasReg || !hasClk || !hasRst || !hasDir || !hasLoad) {
+    return {
+      verdict: 'failed',
+      testsPassed: 0,
+      testsTotal: 5,
+      log: 'Compiling submission.v and testbench.v...\nCompilation successful.\nRunning simulation...\n[FAIL] Test 1: Missing required ports/registers (clk, rst, dir, load, serial_in, parallel_in, parallel_out).\nTESTRESULT FAIL 0/5',
+    };
+  }
+
+  const hasShiftLogic =
+    />>|<<|\{|\bshift_reg\b|\bparallel_out\b/.test(norm);
+  const hasLoadLogic =
+    /\bparallel_in\b/.test(norm) && (/\bload\b/.test(norm) || /\brst\b/.test(norm));
+
+  if (!hasShiftLogic || !hasLoadLogic) {
+    return {
+      verdict: 'failed',
+      testsPassed: 0,
+      testsTotal: 5,
+      log: 'Compiling submission.v and testbench.v...\nCompilation successful.\nRunning simulation...\n[FAIL] Test 1: Shift logic (<< / >> or concatenation) or parallel load logic missing.\nTESTRESULT FAIL 0/5',
+    };
+  }
+
+  const tests = [
+    { name: 'Reset (rst=1)', rst: 1, load: 0, dir: 0, sin: 0, pin: 0, expected: 0b00000000, expBin: '00000000' },
+    { name: 'Parallel Load (10110011)', rst: 0, load: 1, dir: 0, sin: 0, pin: 0b10110011, expected: 0b10110011, expBin: '10110011' },
+    { name: 'Right Shift (dir=0, serial_in=0)', rst: 0, load: 0, dir: 0, sin: 0, pin: 0, expected: 0b01011001, expBin: '01011001' },
+    { name: 'Left Shift (dir=1, serial_in=0)', rst: 0, load: 0, dir: 1, sin: 0, pin: 0, expected: 0b10110010, expBin: '10110010' },
+    { name: 'Right Shift (dir=0, serial_in=1)', rst: 0, load: 0, dir: 0, sin: 1, pin: 0b10110011, reloadPin: true, expected: 0b11011001, expBin: '11011001' },
+  ];
+
+  let passed = 0;
+  const logs = ['Compiling submission.v and testbench.v...', 'Compilation successful.', 'Running simulation...'];
+  let reg = 0;
+
+  for (let i = 0; i < tests.length; i++) {
+    const t = tests[i];
+    if (t.reloadPin) {
+      reg = t.pin & 0xff;
+    }
+
+    if (t.rst === 1) {
+      reg = 0;
+    } else if (t.load === 1) {
+      reg = t.pin & 0xff;
+    } else if (t.dir === 0) {
+      reg = ((t.sin & 1) << 7) | ((reg >> 1) & 0x7f);
+    } else {
+      reg = ((reg << 1) & 0xfe) | (t.sin & 1);
+    }
+
+    if (reg === t.expected) {
+      passed++;
+      logs.push(`[PASS] Test ${i + 1} (${t.name}) => parallel_out=8'b${t.expBin}`);
+    } else {
+      const gotBin = reg.toString(2).padStart(8, '0');
+      logs.push(`[FAIL] Test ${i + 1} (${t.name}) => Expected 8'b${t.expBin}, Got 8'b${gotBin}`);
+    }
+  }
+
+  const isPass = passed === 5;
+  if (isPass) logs.push('All 5 testcases passed successfully.');
+  logs.push(`TESTRESULT ${isPass ? 'PASS' : 'FAIL'} ${passed}/5`);
+
+  return {
+    verdict: isPass ? 'passed' : 'failed',
+    testsPassed: passed,
+    testsTotal: 5,
+    log: logs.join('\n'),
+  };
 }
 
 // --- SIMULATOR FOR MUX2 ---

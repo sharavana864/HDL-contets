@@ -59,8 +59,13 @@ export async function submitSolution(req, res) {
     [run.id, problemId]
   );
   if (attemptResult.rowCount === 0) {
-    // Auto create 7 min attempt
-    const limitSec = 420;
+    const prob = await query('SELECT sequence_no FROM problems WHERE id = $1', [problemId]);
+    const seq = prob.rowCount > 0 ? Number(prob.rows[0].sequence_no) : 1;
+    let limitSec = 420;
+    if (seq === 1 || seq === 2) limitSec = 480;
+    else if (seq === 3 || seq === 4) limitSec = 420;
+    else if (seq === 5) limitSec = 900;
+
     const deadlineAt = new Date(Date.now() + limitSec * 1000);
     const newAttempt = await query(
       `INSERT INTO problem_attempts (run_id, problem_id, time_mode, time_limit_sec, started_at, deadline_at)
@@ -116,7 +121,7 @@ export async function submitSolution(req, res) {
   });
 
   const isPassed = result.verdict === 'passed';
-  const points = isPassed ? pointsForVerdict('passed', problem.difficulty) : 0;
+  const points = isPassed ? pointsForVerdict('passed', problem.difficulty, problem.sequence_no, problem.points) : 0;
 
   // 3. Update submission record
   await query(

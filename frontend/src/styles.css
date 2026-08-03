@@ -163,6 +163,103 @@ body {
   border-color: rgba(239, 68, 68, 0.3);
 }
 
+/* STATEMENT STYLING */
+.statement {
+  background: #111827;
+  border: 1px solid #1f293d;
+  border-left: 4px solid #3b82f6;
+  border-radius: 10px;
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 1.75rem;
+  color: #f1f5f9;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  line-height: 1.7;
+  font-size: 1rem;
+}
+
+.statement-h2, .statement-h3 {
+  color: #60a5fa;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-top: 1.4rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+  padding-bottom: 0.4rem;
+}
+
+.statement-h2:first-child, .statement-h3:first-child {
+  margin-top: 0;
+}
+
+.statement-p {
+  margin: 0.6rem 0;
+  color: #cbd5e1;
+  font-size: 1.02rem;
+  line-height: 1.7;
+}
+
+.statement-p strong {
+  color: #f8fafc;
+  font-weight: 700;
+}
+
+.statement-code {
+  background: #1e293b;
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 0.2em 0.5em;
+  border-radius: 5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.92rem;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.statement-ul {
+  margin: 0.75rem 0 1rem 0;
+  padding-left: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.statement-li {
+  position: relative;
+  padding-left: 1.5rem;
+  color: #e2e8f0;
+  font-size: 0.98rem;
+  line-height: 1.6;
+}
+
+.statement-li::before {
+  content: "•";
+  color: #38bdf8;
+  font-weight: bold;
+  font-size: 1.2rem;
+  position: absolute;
+  left: 0.4rem;
+  top: -0.1rem;
+}
+
+.statement-pre {
+  background: #090d16;
+  border: 1px solid #1e293b;
+  padding: 1rem 1.25rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 1rem 0;
+  color: #38bdf8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
 /* MAIN CONTAINERS */
 .dashboard, .contest-page, .leaderboard-page, .admin-panel {
   max-width: 1100px;

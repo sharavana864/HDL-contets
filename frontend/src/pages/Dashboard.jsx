@@ -25,7 +25,8 @@ export default function Dashboard({ contestId }) {
 
   const { contest, run } = overview;
   const targetContestId = contest?.id || contestId;
-  const progressPct = Math.round((run.total_score / 700) * 100);
+  const maxPoints = 630;
+  const progressPct = Math.min(100, Math.round(((run.total_score || 0) / maxPoints) * 100));
 
   return (
     <div className="dashboard">
@@ -40,7 +41,7 @@ export default function Dashboard({ contestId }) {
         <h2 style={{ color: 'var(--cyan)', marginTop: 0 }}>⚡ {contest.title}</h2>
         <p style={{ color: 'var(--text-heading)' }}>{contest.description}</p>
         <ul style={{ paddingLeft: '1.2rem', color: 'var(--text)', lineHeight: '1.8' }}>
-          <li><strong>5 Verilog Hardware Modules:</strong> 3 Easy (100 pts each) + 2 Medium (200 pts each) — 700 max total points.</li>
+          <li><strong>5 Verilog Hardware Modules:</strong> Questions 1–4 (100 pts each) + Question 5 (230 pts) — 630 max total points.</li>
           <li><strong>Flexible Synthesis Speed:</strong> Fast Mode (1 min), Standard Mode (3 min), or Relaxed Mode (5 min) per problem.</li>
           <li><strong>Strict Gate Simulation:</strong> Submissions are compiled and run against HDL testbenches for signal accuracy.</li>
           <li><strong>Sequential Verification:</strong> Problems are presented sequentially for immediate hardware verification.</li>
@@ -51,7 +52,7 @@ export default function Dashboard({ contestId }) {
         <h3 style={{ marginTop: 0 }}>📊 Arena Run Progress</h3>
         <div className="progress-bar"><div style={{ width: `${progressPct}%` }} /></div>
         <p style={{ margin: '0.5rem 0 0 0', fontWeight: 'bold', color: 'var(--text-heading)' }}>
-          Score: <span style={{ color: 'var(--cyan)' }}>{run.total_score}</span> / 700 points — Status: <span style={{ color: run.status === 'completed' ? 'var(--pass)' : 'var(--warn)', textTransform: 'uppercase' }}>{run.status.replace('_', ' ')}</span>
+          Score: <span style={{ color: 'var(--cyan)' }}>{run.total_score || 0}</span> / 630 points — Status: <span style={{ color: run.status === 'completed' ? 'var(--pass)' : 'var(--warn)', textTransform: 'uppercase' }}>{run.status.replace('_', ' ')}</span>
         </p>
       </section>
 

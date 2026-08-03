@@ -154,9 +154,17 @@ export async function getCurrentProblem(req, res) {
     }
   }
 
-  // Automatically start single 7-minute (420s) timer if not already started
+  function getTimeLimitSec(sequenceNo) {
+  const seq = Number(sequenceNo);
+  if (seq === 1 || seq === 2) return 480; // 8 mins
+  if (seq === 3 || seq === 4) return 420; // 7 mins
+  if (seq === 5) return 900;              // 15 mins
+  return 420;                             // default 7 mins
+}
+
+// Automatically start timer (Questions 1,2: 8m, 3,4: 7m, 5: 15m) if not already started
   if (attempt.rowCount === 0) {
-    const limitSec = 420; // 7 minutes
+    const limitSec = getTimeLimitSec(seq);
     const now = new Date();
     const deadlineAt = new Date(now.getTime() + limitSec * 1000);
     const newAttempt = await query(
@@ -204,7 +212,9 @@ export async function selectTimeMode(req, res) {
     return res.status(200).json({ attempt: existing.rows[0] });
   }
 
-  const limitSec = 420; // 7 mins
+  const prob = await query('SELECT sequence_no FROM problems WHERE id = $1', [problemId]);
+  const seq = prob.rowCount > 0 ? prob.rows[0].sequence_no : 1;
+  const limitSec = getTimeLimitSec(seq);
   const now = new Date();
   const deadlineAt = new Date(now.getTime() + limitSec * 1000);
 
