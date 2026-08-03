@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import api from '../api/axios.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
-// NOTE: contestId would normally come from a "current active contest" API call
-// or route param; hardcoded fetch-active-contest logic omitted for brevity.
 export default function Dashboard({ contestId }) {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [overview, setOverview] = useState(null);
   const navigate = useNavigate();
+
+  if (user?.role === 'admin' || user?.role === 'judge') {
+    return <Navigate to={`/admin/${contestId || 'active'}`} replace />;
+  }
 
   useEffect(() => {
     api.get(`/contests/${contestId}`).then((res) => setOverview(res.data));

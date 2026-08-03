@@ -49,6 +49,13 @@ export default function AdminPanel() {
     }
   };
 
+  const formatCompletionTime = (sec) => {
+    if (sec === null || sec === undefined || isNaN(sec)) return 'N/A';
+    const mins = Math.floor(sec / 60);
+    const secs = Math.floor(sec % 60);
+    return `${mins}m ${secs < 10 ? '0' : ''}${secs}s`;
+  };
+
   return (
     <div className="admin-panel">
       <h1>Admin Control Panel</h1>
@@ -97,9 +104,19 @@ export default function AdminPanel() {
       )}
 
       <section className="live-submissions">
-        <h2>Live Submissions</h2>
+        <h2>Live Submissions Log</h2>
         <table>
-          <thead><tr><th>Participant</th><th>Problem</th><th>Verdict</th><th>Tests</th><th>Points</th><th>Time</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Participant</th>
+              <th>Problem</th>
+              <th>Verdict</th>
+              <th>Tests</th>
+              <th>Points</th>
+              <th>Completion Time</th>
+              <th>Submitted At</th>
+            </tr>
+          </thead>
           <tbody>
             {submissions.map((s) => (
               <tr key={s.id} className={`row-${s.verdict}`}>
@@ -108,6 +125,7 @@ export default function AdminPanel() {
                 <td>{s.verdict}</td>
                 <td>{s.tests_passed}/{s.tests_total}</td>
                 <td>{s.points_awarded}</td>
+                <td style={{ fontWeight: 'bold', color: 'var(--cyan)' }}>{formatCompletionTime(s.duration_seconds)}</td>
                 <td>{new Date(s.submitted_at).toLocaleTimeString()}</td>
               </tr>
             ))}

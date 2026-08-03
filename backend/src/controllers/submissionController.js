@@ -30,25 +30,49 @@ export async function submitSolution(req, res) {
     return res.status(400).json({ error: 'code is required' });
   }
 
-  const runResult = await query(
+  let runResult = await query(
     'SELECT * FROM contest_runs WHERE contest_id = $1 AND user_id = $2',
     [contestId, req.user.id]
   );
   if (runResult.rowCount === 0 || runResult.rows[0].status !== 'in_progress') {
-    return res.status(409).json({ error: 'No active run' });
+    // Auto-start run if needed
+    const contest = await query('SELECT status FROM contests WHERE id = $1', [contestId]);
+    if (contest.rowCount === 0 || contest.rows[0].status !== 'running') {
+      return res.status(400).json({ error: 'Contest is not active' });
+    }
+    const started = await withTransaction(async (client) => {
+      const ins = await client.query(
+        `INSERT INTO contest_runs (contest_id, user_id, status, current_problem_seq, started_at)
+         VALUES ($1, $2, 'in_progress', 1, now())
+         ON CONFLICT (contest_id, user_id) DO UPDATE SET status = 'in_progress'
+         RETURNING *`,
+        [contestId, req.user.id]
+      );
+      return ins.rows[0];
+    });
+    runResult = { rowCount: 1, rows: [started] };
   }
   const run = runResult.rows[0];
 
-  const attemptResult = await query(
+  let attemptResult = await query(
     `SELECT * FROM problem_attempts WHERE run_id = $1 AND problem_id = $2`,
     [run.id, problemId]
   );
   if (attemptResult.rowCount === 0) {
-    return res.status(409).json({ error: 'Select a time mode before submitting' });
+    // Auto create 7 min attempt
+    const limitSec = 420;
+    const deadlineAt = new Date(Date.now() + limitSec * 1000);
+    const newAttempt = await query(
+      `INSERT INTO problem_attempts (run_id, problem_id, time_mode, time_limit_sec, started_at, deadline_at)
+       VALUES ($1, $2, 'standard', $3, now(), $4)
+       RETURNING *`,
+      [run.id, problemId, limitSec, deadlineAt]
+    );
+    attemptResult = newAttempt;
   }
   const attempt = attemptResult.rows[0];
   if (attempt.finished_at) {
-    return res.status(409).json({ error: 'This problem has already been graded and passed' });
+    return res.json({ passed: true, verdict: 'passed', pointsAwarded: 0, message: 'This problem has already been graded and passed' });
   }
 
   const problemResult = await query('SELECT * FROM problems WHERE id = $1', [problemId]);
@@ -56,7 +80,7 @@ export async function submitSolution(req, res) {
   const problem = problemResult.rows[0];
 
   // Check if time expired
-  if (new Date(attempt.deadline_at) < new Date()) {
+  if (attempt.deadline_at && new Date(attempt.deadline_at) < new Date()) {
     // Time expired: finalize attempt with 0 points and move to next problem
     const nextSeq = problem.sequence_no + 1;
     const isLast = nextSeq > 5;
@@ -71,7 +95,7 @@ export async function submitSolution(req, res) {
         [isLast ? problem.sequence_no : nextSeq, isLast ? 'completed' : 'in_progress', run.id]
       );
     });
-    return res.status(409).json({ error: 'Time limit exceeded for this problem', expired: true });
+    return res.json({ error: 'Time limit exceeded for this problem', expired: true, verdict: 'time_limit_exceeded', passed: false });
   }
 
   // 1. Persist a "pending" submission row immediately so admins see it live.

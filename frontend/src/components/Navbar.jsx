@@ -16,12 +16,15 @@ export default function Navbar({ contestId }) {
     navigate('/login');
   };
 
+  const isAdmin = user.role === 'admin' || user.role === 'judge';
+  const brandTarget = isAdmin ? `/admin/${currentContestId}` : '/dashboard';
+
   return (
     <>
       <TopHeaderLogos height={38} />
       <header className="app-navbar">
         <div className="navbar-container">
-          <Link to="/dashboard" className="navbar-brand" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Link to={brandTarget} className="navbar-brand" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <C3Logo height={34} showSubtitle={false} />
             <span className="brand-text" style={{ fontSize: '1.25rem', fontWeight: '800' }}>
               C³ <span className="brand-highlight" style={{ fontSize: '0.85rem', fontWeight: '600', textTransform: 'uppercase', color: '#93c5fd' }}>HDL Arena</span>
@@ -29,31 +32,42 @@ export default function Navbar({ contestId }) {
           </Link>
 
         <nav className="navbar-menu">
-          <Link
-            to="/dashboard"
-            className={`nav-item ${location.pathname === '/dashboard' ? 'active' : ''}`}
-          >
-            📊 Dashboard
-          </Link>
-          <Link
-            to={`/contest/${currentContestId}`}
-            className={`nav-item ${location.pathname.startsWith('/contest') ? 'active' : ''}`}
-          >
-            ⚡ Contest Arena
-          </Link>
-          <Link
-            to={`/leaderboard/${currentContestId}`}
-            className={`nav-item ${location.pathname.startsWith('/leaderboard') || location.pathname.startsWith('/results') ? 'active' : ''}`}
-          >
-            🏆 Leaderboard
-          </Link>
-          {(user.role === 'admin' || user.role === 'judge') && (
-            <Link
-              to={`/admin/${currentContestId}`}
-              className={`nav-item nav-admin ${location.pathname.startsWith('/admin') ? 'active' : ''}`}
-            >
-              ⚙️ Admin Panel
-            </Link>
+          {!isAdmin ? (
+            <>
+              <Link
+                to="/dashboard"
+                className={`nav-item ${location.pathname === '/dashboard' ? 'active' : ''}`}
+              >
+                📊 Dashboard
+              </Link>
+              <Link
+                to={`/contest/${currentContestId}`}
+                className={`nav-item ${location.pathname.startsWith('/contest') ? 'active' : ''}`}
+              >
+                ⚡ Contest Arena
+              </Link>
+              <Link
+                to={`/leaderboard/${currentContestId}`}
+                className={`nav-item ${location.pathname.startsWith('/leaderboard') || location.pathname.startsWith('/results') ? 'active' : ''}`}
+              >
+                🏆 Leaderboard
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link
+                to={`/admin/${currentContestId}`}
+                className={`nav-item nav-admin ${location.pathname.startsWith('/admin') ? 'active' : ''}`}
+              >
+                ⚙️ Admin Control Panel
+              </Link>
+              <Link
+                to={`/leaderboard/${currentContestId}`}
+                className={`nav-item ${location.pathname.startsWith('/leaderboard') || location.pathname.startsWith('/results') ? 'active' : ''}`}
+              >
+                🏆 Leaderboard
+              </Link>
+            </>
           )}
         </nav>
 

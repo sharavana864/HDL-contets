@@ -53,10 +53,16 @@ export async function listSubmissions(req, res) {
   const contestId = await resolveContestId(req.params.contestId);
   const result = await query(
     `SELECT s.id, u.participant_id, u.name, p.title AS problem_title, s.verdict,
-            s.tests_passed, s.tests_total, s.points_awarded, s.submitted_at
+            s.tests_passed, s.tests_total, s.points_awarded, s.submitted_at,
+            pa.started_at AS attempt_started_at,
+            CASE
+              WHEN pa.started_at IS NOT NULL THEN ROUND(EXTRACT(EPOCH FROM (s.submitted_at - pa.started_at)))
+              ELSE NULL
+            END AS duration_seconds
      FROM submissions s
      JOIN users u ON u.id = s.user_id
      JOIN problems p ON p.id = s.problem_id
+     LEFT JOIN problem_attempts pa ON pa.id = s.attempt_id
      WHERE p.contest_id = $1
      ORDER BY s.submitted_at DESC LIMIT 200`,
     [contestId]
@@ -171,16 +177,34 @@ export async function exportLeaderboardCsv(req, res) {
 export async function exportLogsCsv(req, res) {
   const contestId = await resolveContestId(req.params.contestId);
   const result = await query(
-    `SELECT u.participant_id, p.title AS problem, s.verdict, s.tests_passed, s.tests_total,
-            s.points_awarded, s.submitted_at
+    `SELECT u.participant_id, u.name, p.title AS problem, s.verdict, s.tests_passed, s.tests_total,
+            s.points_awarded, s.submitted_at,
+            CASE
+              WHEN pa.started_at IS NOT NULL THEN ROUND(EXTRACT(EPOCH FROM (s.submitted_at - pa.started_at)))
+              ELSE NULL
+            END AS duration_seconds
      FROM submissions s
      JOIN users u ON u.id = s.user_id
      JOIN problems p ON p.id = s.problem_id
+     LEFT JOIN problem_attempts pa ON pa.id = s.attempt_id
      WHERE p.contest_id = $1 ORDER BY s.submitted_at`,
     [contestId]
   );
-  const fields = ['participant_id', 'problem', 'verdict', 'tests_passed', 'tests_total', 'points_awarded', 'submitted_at'];
-  const csv = convertToCsv(result.rows, fields);
+  const formattedRows = result.rows.map((row) => {
+    let completion_time = '-';
+    if (row.duration_seconds !== null && row.duration_seconds !== undefined) {
+      const sec = Number(row.duration_seconds);
+      const mins = Math.floor(sec / 60);
+      const secs = Math.floor(sec % 60);
+      completion_time = `${mins}m ${secs < 10 ? '0' : ''}${secs}s`;
+    }
+    return {
+      ...row,
+      completion_time,
+    };
+  });
+  const fields = ['participant_id', 'name', 'problem', 'verdict', 'tests_passed', 'tests_total', 'points_awarded', 'completion_time', 'submitted_at'];
+  const csv = convertToCsv(formattedRows, fields);
   res.setHeader('Content-Type', 'text/csv');
   res.setHeader('Content-Disposition', 'attachment; filename="submission-logs.csv"');
   res.status(200).send(csv);

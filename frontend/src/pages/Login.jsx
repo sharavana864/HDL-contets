@@ -14,8 +14,12 @@ export default function Login() {
     e.preventDefault();
     setError('');
     try {
-      await login(participantId, password);
-      navigate('/dashboard');
+      const loggedUser = await login(participantId, password);
+      if (loggedUser?.role === 'admin' || loggedUser?.role === 'judge') {
+        navigate('/admin/active');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed');
     }
@@ -30,7 +34,7 @@ export default function Login() {
       </div>
 
       <form onSubmit={handleSubmit} className="auth-form">
-        <h1 style={{ textAlign: 'center', marginBottom: '1.25rem' }}>Participant Sign In</h1>
+        <h1 style={{ textAlign: 'center', marginBottom: '1.25rem' }}>Sign In to C³ Arena</h1>
         <label>Participant ID
           <input
             value={participantId}

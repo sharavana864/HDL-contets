@@ -516,6 +516,11 @@ function handleInMemoryQuery(text, params = []) {
     }).map((s) => {
       const u = memoryDb.users.find((x) => x.id === s.user_id) || {};
       const p = memoryDb.problems.find((x) => x.id === s.problem_id) || {};
+      const pa = memoryDb.problem_attempts.find((x) => x.id === s.attempt_id) || {};
+      let duration_seconds = null;
+      if (s.submitted_at && pa.started_at) {
+        duration_seconds = Math.max(0, Math.round((new Date(s.submitted_at).getTime() - new Date(pa.started_at).getTime()) / 1000));
+      }
       return {
         id: s.id,
         participant_id: u.participant_id,
@@ -526,6 +531,8 @@ function handleInMemoryQuery(text, params = []) {
         tests_total: s.tests_total,
         points_awarded: s.points_awarded,
         submitted_at: s.submitted_at,
+        attempt_started_at: pa.started_at,
+        duration_seconds,
       };
     });
     subs.sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));

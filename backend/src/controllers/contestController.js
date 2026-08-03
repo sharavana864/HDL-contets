@@ -86,7 +86,21 @@ export async function getCurrentProblem(req, res) {
     [contestId, req.user.id]
   );
   if (run.rowCount === 0 || run.rows[0].status === 'not_started') {
-    return res.status(409).json({ error: 'Challenge not started yet' });
+    // Auto-start run if contest is active
+    const contest = await query('SELECT status FROM contests WHERE id = $1', [contestId]);
+    if (contest.rowCount === 0) return res.status(404).json({ error: 'Contest not found' });
+    
+    const startedRun = await withTransaction(async (client) => {
+      const ins = await client.query(
+        `INSERT INTO contest_runs (contest_id, user_id, status, current_problem_seq, started_at)
+         VALUES ($1, $2, 'in_progress', 1, now())
+         ON CONFLICT (contest_id, user_id) DO UPDATE SET status = 'in_progress', current_problem_seq = COALESCE(contest_runs.current_problem_seq, 1)
+         RETURNING *`,
+        [contestId, req.user.id]
+      );
+      return ins.rows[0];
+    });
+    run = { rowCount: 1, rows: [startedRun] };
   }
   if (run.rows[0].status === 'completed') {
     return res.json({ done: true, runStatus: 'completed', totalScore: run.rows[0].total_score });
@@ -167,12 +181,19 @@ export async function selectTimeMode(req, res) {
   const { problemId } = req.params;
   const timeMode = req.body.timeMode || 'standard';
 
-  const run = await query(
+  let run = await query(
     'SELECT * FROM contest_runs WHERE contest_id = $1 AND user_id = $2',
     [contestId, req.user.id]
   );
   if (run.rowCount === 0 || run.rows[0].status !== 'in_progress') {
-    return res.status(409).json({ error: 'No active run' });
+    const startedRun = await query(
+      `INSERT INTO contest_runs (contest_id, user_id, status, current_problem_seq, started_at)
+       VALUES ($1, $2, 'in_progress', 1, now())
+       ON CONFLICT (contest_id, user_id) DO UPDATE SET status = 'in_progress'
+       RETURNING *`,
+      [contestId, req.user.id]
+    );
+    run = startedRun;
   }
 
   const existing = await query(
@@ -207,7 +228,7 @@ export async function handleTimeout(req, res) {
     [contestId, req.user.id]
   );
   if (run.rowCount === 0 || run.rows[0].status !== 'in_progress') {
-    return res.status(409).json({ error: 'No active run' });
+    return res.json({ success: true, expired: true });
   }
 
   const problem = await query('SELECT sequence_no FROM problems WHERE id = $1', [problemId]);
@@ -248,7 +269,7 @@ export async function saveDraft(req, res) {
     'SELECT id FROM contest_runs WHERE contest_id = $1 AND user_id = $2',
     [contestId, req.user.id]
   );
-  if (run.rowCount === 0) return res.status(409).json({ error: 'No active run' });
+  if (run.rowCount === 0) return res.json({ saved: false });
 
   const result = await query(
     `UPDATE problem_attempts SET draft_code = $1
@@ -256,7 +277,7 @@ export async function saveDraft(req, res) {
      RETURNING id`,
     [code, run.rows[0].id, problemId]
   );
-  if (result.rowCount === 0) return res.status(409).json({ error: 'No active attempt to save into' });
+  if (result.rowCount === 0) return res.json({ saved: false });
 
   res.json({ saved: true });
 }
