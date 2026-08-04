@@ -95,20 +95,7 @@ async function runNativeIverilog({ submissionCode, testbenchCode, topModule }) {
 
     const fullLog = `[Icarus Verilog v11.0 Engine Output]\nCompiling submission.v and testbench.v...\nCompilation successful.\nRunning simulation...\n${cleanSimLog}`;
 
-    // Check if testbench produced explicit TESTRESULT line
-    const parsed = parseHarnessOutput(fullLog);
-    if (parsed && (parsed.testsTotal > 0 || parsed.log.includes('TESTRESULT'))) {
-      return parsed;
-    }
-
-    // Verify signal behavior using specialized verifiers
-    const jsResult = runInJsCompiler({ submissionCode, testbenchCode, topModule });
-    return {
-      verdict: jsResult.verdict,
-      testsPassed: jsResult.testsPassed,
-      testsTotal: jsResult.testsTotal,
-      log: `${fullLog}\n\n--- Verification Summary ---\n${jsResult.log}`,
-    };
+    return parseHarnessOutput(fullLog);
   } finally {
     await fs.rm(workDir, { recursive: true, force: true }).catch(() => {});
   }
@@ -386,10 +373,19 @@ function validateVerilogSyntax(code, topModule) {
           };
         }
       }
-      if (/assign\s+[a-zA-Z0-9_]+\s*=\s*;/.test(line)) {
+      if (/assign\s+[a-zA-Z0-9_]+\s*=\s*;/.test(line) || /assign\s+.*\s*[\+\-\*\/\%\&\|\^\~]\s*;/.test(line)) {
         return {
           valid: false,
-          error: `submission.v:${lineNum}: error: syntax error, empty right-hand side in assign statement`,
+          error: `submission.v:${lineNum}: error: syntax error in continuous assignment`,
+        };
+      }
+    }
+
+    if (!line.startsWith('//') && !line.startsWith('/*')) {
+      if (/[a-zA-Z0-9_]+\s*(<=|=)\s*;/.test(line) || /[a-zA-Z0-9_]+\s*(<=|=)\s*.*[\+\-\*\/\%\&\|\^\~]\s*;/.test(line)) {
+        return {
+          valid: false,
+          error: `submission.v:${lineNum}: error: syntax error, incomplete expression before ';'`,
         };
       }
     }

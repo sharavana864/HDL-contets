@@ -33,41 +33,98 @@ const memoryDb = {
 function initInMemoryData() {
   const now = new Date().toISOString();
   
-  // Users
-  const adminPass = bcrypt.hashSync('admin123', 10);
-  const adminPass1 = bcrypt.hashSync('admin_pass1', 10);
-  const adminPass2 = bcrypt.hashSync('admin_pass2', 10);
-  const adminPass3 = bcrypt.hashSync('admin_pass3', 10);
-  const adminPass4 = bcrypt.hashSync('admin_pass4', 10);
-  const judgePass = bcrypt.hashSync('judge123', 10);
+  // Seed official accounts
+  const superAdminPass = bcrypt.hashSync('admin123', 10);
   
   memoryDb.users = [
-    { id: '10000000-0000-0000-0000-000000000001', participant_id: 'admin', name: 'Contest Admin', email: 'admin@hdl.org', password_hash: adminPass, role: 'admin', locale: 'en', created_at: now, is_active: true },
-    { id: '10000000-0000-0000-0000-000000000011', participant_id: 'admin1', name: 'Main Admin (Coordinator)', email: 'admin1@ritchennai.edu.in', password_hash: adminPass1, role: 'admin', locale: 'en', created_at: now, is_active: true },
-    { id: '10000000-0000-0000-0000-000000000012', participant_id: 'admin2', name: 'Admin 2 (RIT Faculty)', email: 'admin2@ritchennai.edu.in', password_hash: adminPass2, role: 'admin', locale: 'en', created_at: now, is_active: true },
-    { id: '10000000-0000-0000-0000-000000000013', participant_id: 'admin3', name: 'Admin 3 (IEI Representative)', email: 'admin3@ieiindia.org', password_hash: adminPass3, role: 'admin', locale: 'en', created_at: now, is_active: true },
-    { id: '10000000-0000-0000-0000-000000000014', participant_id: 'admin4', name: 'Admin 4 (Technical Lead)', email: 'admin4@ritchennai.edu.in', password_hash: adminPass4, role: 'admin', locale: 'en', created_at: now, is_active: true },
-    { id: '10000000-0000-0000-0000-000000000002', participant_id: 'judge', name: 'Contest Judge', email: 'judge@hdl.org', password_hash: judgePass, role: 'judge', locale: 'en', created_at: now, is_active: true },
+    { id: '10000000-0000-0000-0000-000000000001', participant_id: 'admin', name: 'Contest Lead Admin', email: 'admin@ritchennai.edu.in', password_hash: superAdminPass, role: 'admin', locale: 'en', created_at: now, is_active: true },
   ];
 
-  // Seed participants iei_2600 to iei_2620
-  const names = [
-    'Aravind S', 'Bala Murugan', 'Deepak Raj', 'Dharshini M', 'Gokulnath K',
-    'Hari Prasad', 'Indhuja R', 'Janani V', 'Karthik N', 'Kavya P',
-    'Lokesh Kumar', 'Manojkumar T', 'Naveen Raj', 'Pavithra S', 'Rahul Dravid',
-    'Sanjay K', 'Shalini M', 'Sri Ram', 'Surya Prakash', 'Swetha R', 'Yogeshwaran'
+  // 1. Contestant Teams (IEICCC001 to IEICCC040)
+  const contestantTeams = [
+    { teamNo: 'IEICCC001', teamName: 'BINARY BRAINS', pass: 'PASS_001' },
+    { teamNo: 'IEICCC002', teamName: 'NEXABITES', pass: 'PASS_002' },
+    { teamNo: 'IEICCC003', teamName: 'NovaX', pass: 'PASS_003' },
+    { teamNo: 'IEICCC004', teamName: 'Twin sparks', pass: 'PASS_004' },
+    { teamNo: 'IEICCC005', teamName: 'The Yeagers', pass: 'PASS_005' },
+    { teamNo: 'IEICCC006', teamName: 'InnovX', pass: 'PASS_006' },
+    { teamNo: 'IEICCC007', teamName: 'BladeRunner', pass: 'PASS_007' },
+    { teamNo: 'IEICCC008', teamName: 'CodeXAD', pass: 'PASS_008' },
+    { teamNo: 'IEICCC009', teamName: 'VeriLogic', pass: 'PASS_009' },
+    { teamNo: 'IEICCC010', teamName: 'BINARYBRAINS', pass: 'PASS_010' },
+    { teamNo: 'IEICCC011', teamName: 'Vlsi apirants', pass: 'PASS_011' },
+    { teamNo: 'IEICCC012', teamName: 'STANGE FORCE', pass: 'PASS_012' },
+    { teamNo: 'IEICCC013', teamName: 'Heisenberg', pass: 'PASS_013' },
+    { teamNo: 'IEICCC014', teamName: 'NEXUS', pass: 'PASS_014' },
+    { teamNo: 'IEICCC015', teamName: 'RMD', pass: 'PASS_015' },
+    { teamNo: 'IEICCC016', teamName: 'Mavricks', pass: 'PASS_016' },
+    { teamNo: 'IEICCC017', teamName: 'WIREZUP', pass: 'PASS_017' },
+    { teamNo: 'IEICCC018', teamName: 'TEAMTWIZ', pass: 'PASS_018' },
+    { teamNo: 'IEICCC019', teamName: 'VERLEX', pass: 'PASS_019' },
+    { teamNo: 'IEICCC020', teamName: 'FALCONS', pass: 'PASS_020' },
+    { teamNo: 'IEICCC021', teamName: 'TEAM CIPHER', pass: 'PASS_021' },
+    { teamNo: 'IEICCC022', teamName: 'CUBECODERS', pass: 'PASS_022' },
+    { teamNo: 'IEICCC023', teamName: 'Logicx', pass: 'PASS_023' },
+    { teamNo: 'IEICCC024', teamName: 'ELECTROVERSE', pass: 'PASS_024' },
+    { teamNo: 'IEICCC025', teamName: 'SPARK', pass: 'PASS_025' },
+    { teamNo: 'IEICCC026', teamName: 'TWINTECH', pass: 'PASS_026' },
+    { teamNo: 'IEICCC027', teamName: 'ZORO', pass: 'PASS_027' },
+    { teamNo: 'IEICCC028', teamName: 'DUAL SAN', pass: 'PASS_028' },
+    { teamNo: 'IEICCC029', teamName: 'Verilog Speedrun', pass: 'PASS_029' },
+    { teamNo: 'IEICCC030', teamName: 'House Targaryen', pass: 'PASS_030' },
+    { teamNo: 'IEICCC031', teamName: 'Shield', pass: 'PASS_031' },
+    { teamNo: 'IEICCC032', teamName: 'ByteX', pass: 'PASS_032' },
+    { teamNo: 'IEICCC033', teamName: 'THARUN A B', pass: 'PASS_033' },
+    { teamNo: 'IEICCC034', teamName: 'RISC raiders', pass: 'PASS_034' },
+    { teamNo: 'IEICCC035', teamName: 'DH boys', pass: 'PASS_035' },
+    { teamNo: 'IEICCC036', teamName: 'LOGIX', pass: 'PASS_036' },
+    { teamNo: 'IEICCC037', teamName: 'CodeDuos', pass: 'PASS_037' },
+    { teamNo: 'IEICCC038', teamName: 'Duo dangles', pass: 'PASS_038' },
+    { teamNo: 'IEICCC039', teamName: 'IGNIS', pass: 'PASS_039' },
+    { teamNo: 'IEICCC040', teamName: 'RTL Rebels', pass: 'PASS_040' },
   ];
 
-  for (let i = 2600; i <= 2620; i++) {
-    const idx = i - 2600;
-    const participantId = `iei_${i}`;
-    const plainPass = `pass_${i}`;
-    const studentName = `${names[idx % names.length]} (${participantId})`;
+  contestantTeams.forEach((t, idx) => {
+    const numStr = String(idx + 1).padStart(3, '0');
     memoryDb.users.push({
-      id: `10000000-0000-0000-0000-${String(i).padStart(12, '0')}`,
-      participant_id: participantId,
-      name: studentName,
-      email: `${participantId}@ritchennai.edu.in`,
+      id: `30000000-0000-0000-0000-${numStr.padStart(12, '0')}`,
+      participant_id: t.teamNo,
+      name: t.teamName,
+      email: `${t.teamNo.toLowerCase()}@ritchennai.edu.in`,
+      password_hash: bcrypt.hashSync(t.pass, 10),
+      role: 'participant',
+      locale: 'en',
+      created_at: now,
+      is_active: true,
+    });
+  });
+
+  // 2. Admins (RIT_1432 to RIT_1440)
+  for (let num = 1432; num <= 1440; num++) {
+    const partId = `RIT_${num}`;
+    const plainPass = `PASS_${num}`;
+    memoryDb.users.push({
+      id: `40000000-0000-0000-0000-00000000${num}`,
+      participant_id: partId,
+      name: 'ADMIN',
+      email: `${partId.toLowerCase()}@ritchennai.edu.in`,
+      password_hash: bcrypt.hashSync(plainPass, 10),
+      role: 'admin',
+      locale: 'en',
+      created_at: now,
+      is_active: true,
+    });
+  }
+
+  // 3. Dummy Users (IEI_1432 to IEI_1440)
+  for (let num = 1432; num <= 1440; num++) {
+    const partId = `IEI_${num}`;
+    const plainPass = `PASS_${num}`;
+    memoryDb.users.push({
+      id: `50000000-0000-0000-0000-00000000${num}`,
+      participant_id: partId,
+      name: 'DUMMY USER',
+      email: `${partId.toLowerCase()}@ieiindia.org`,
       password_hash: bcrypt.hashSync(plainPass, 10),
       role: 'participant',
       locale: 'en',
@@ -102,7 +159,7 @@ function initInMemoryData() {
       difficulty: 'easy',
       points: 100,
       starter_code: 'module decoder3to8(\n  input [2:0] in,\n  output out0,\n  output out1,\n  output out2,\n  output out3,\n  output out4,\n  output out5,\n  output out6,\n  output out7\n);\n  // TODO: Implement 3-to-8 binary decoder\nendmodule\n',
-      testbench_code: 'module decoder3to8_tb;\n  reg [2:0] in;\n  wire out0, out1, out2, out3, out4, out5, out6, out7;\n\n  decoder3to8 dut(\n    .in(in),\n    .out0(out0), .out1(out1), .out2(out2), .out3(out3),\n    .out4(out4), .out5(out5), .out6(out6), .out7(out7)\n  );\n\n  initial begin\n    in = 3\'b000; #10;\n    in = 3\'b001; #10;\n    in = 3\'b010; #10;\n    in = 3\'b011; #10;\n    in = 3\'b100; #10;\n    in = 3\'b101; #10;\n    in = 3\'b110; #10;\n    in = 3\'b111; #10;\n    $finish;\n  end\nendmodule\n',
+      testbench_code: 'module decoder3to8_tb;\n  reg [2:0] in;\n  wire out0, out1, out2, out3, out4, out5, out6, out7;\n  integer pass_count = 0;\n\n  decoder3to8 dut(\n    .in(in),\n    .out0(out0), .out1(out1), .out2(out2), .out3(out3),\n    .out4(out4), .out5(out5), .out6(out6), .out7(out7)\n  );\n\n  initial begin\n    in = 3\'b000; #10; if ({out7,out6,out5,out4,out3,out2,out1,out0} === 8\'b00000001) pass_count = pass_count + 1;\n    in = 3\'b001; #10; if ({out7,out6,out5,out4,out3,out2,out1,out0} === 8\'b00000010) pass_count = pass_count + 1;\n    in = 3\'b010; #10; if ({out7,out6,out5,out4,out3,out2,out1,out0} === 8\'b00000100) pass_count = pass_count + 1;\n    in = 3\'b011; #10; if ({out7,out6,out5,out4,out3,out2,out1,out0} === 8\'b00001000) pass_count = pass_count + 1;\n    in = 3\'b100; #10; if ({out7,out6,out5,out4,out3,out2,out1,out0} === 8\'b00010000) pass_count = pass_count + 1;\n    in = 3\'b101; #10; if ({out7,out6,out5,out4,out3,out2,out1,out0} === 8\'b00100000) pass_count = pass_count + 1;\n    in = 3\'b110; #10; if ({out7,out6,out5,out4,out3,out2,out1,out0} === 8\'b01000000) pass_count = pass_count + 1;\n    in = 3\'b111; #10; if ({out7,out6,out5,out4,out3,out2,out1,out0} === 8\'b10000000) pass_count = pass_count + 1;\n    if (pass_count === 8) $display("TESTRESULT PASS 8/8"); else $display("TESTRESULT FAIL %0d/8", pass_count);\n    $finish;\n  end\nendmodule\n',
       top_module: 'decoder3to8',
       created_at: now,
     },
@@ -115,7 +172,7 @@ function initInMemoryData() {
       difficulty: 'easy',
       points: 100,
       starter_code: 'module mux8to1(\n  input d0,\n  input d1,\n  input d2,\n  input d3,\n  input d4,\n  input d5,\n  input d6,\n  input d7,\n  input [2:0] sel,\n  output y\n);\n  // TODO: Implement 8-to-1 multiplexer\nendmodule\n',
-      testbench_code: 'module mux8to1_tb;\n  reg d0, d1, d2, d3, d4, d5, d6, d7;\n  reg [2:0] sel;\n  wire y;\n\n  mux8to1 dut(\n    .d0(d0), .d1(d1), .d2(d2), .d3(d3),\n    .d4(d4), .d5(d5), .d6(d6), .d7(d7),\n    .sel(sel), .y(y)\n  );\n\n  initial begin\n    d0=1; d1=0; d2=1; d3=0; d4=1; d5=0; d6=1; d7=0;\n    sel = 3\'b000; #10;\n    sel = 3\'b001; #10;\n    sel = 3\'b010; #10;\n    sel = 3\'b011; #10;\n    sel = 3\'b100; #10;\n    sel = 3\'b101; #10;\n    sel = 3\'b110; #10;\n    sel = 3\'b111; #10;\n    $finish;\n  end\nendmodule\n',
+      testbench_code: 'module mux8to1_tb;\n  reg d0, d1, d2, d3, d4, d5, d6, d7;\n  reg [2:0] sel;\n  wire y;\n  integer pass_count = 0;\n\n  mux8to1 dut(\n    .d0(d0), .d1(d1), .d2(d2), .d3(d3),\n    .d4(d4), .d5(d5), .d6(d6), .d7(d7),\n    .sel(sel), .y(y)\n  );\n\n  initial begin\n    d0=1; d1=0; d2=1; d3=0; d4=1; d5=0; d6=1; d7=0;\n    sel = 3\'b000; #10; if (y === d0) pass_count = pass_count + 1;\n    sel = 3\'b001; #10; if (y === d1) pass_count = pass_count + 1;\n    sel = 3\'b010; #10; if (y === d2) pass_count = pass_count + 1;\n    sel = 3\'b011; #10; if (y === d3) pass_count = pass_count + 1;\n    sel = 3\'b100; #10; if (y === d4) pass_count = pass_count + 1;\n    sel = 3\'b101; #10; if (y === d5) pass_count = pass_count + 1;\n    sel = 3\'b110; #10; if (y === d6) pass_count = pass_count + 1;\n    sel = 3\'b111; #10; if (y === d7) pass_count = pass_count + 1;\n    if (pass_count === 8) $display("TESTRESULT PASS 8/8"); else $display("TESTRESULT FAIL %0d/8", pass_count);\n    $finish;\n  end\nendmodule\n',
       top_module: 'mux8to1',
       created_at: now,
     },
@@ -128,7 +185,7 @@ function initInMemoryData() {
       difficulty: 'medium',
       points: 100,
       starter_code: 'module ring_counter(\n    input clk,\n    input rst,\n    output reg [3:0] count\n);\n    // write code here\n\nendmodule\n',
-      testbench_code: 'module ring_counter_tb;\n  reg clk, rst;\n  wire [3:0] count;\n\n  ring_counter dut(.clk(clk), .rst(rst), .count(count));\n\n  initial begin\n    clk = 0;\n    forever #5 clk = ~clk;\n  end\n\n  initial begin\n    rst = 1; #12;\n    rst = 0; #50;\n    $finish;\n  end\nendmodule\n',
+      testbench_code: 'module ring_counter_tb;\n  reg clk, rst;\n  wire [3:0] count;\n  integer pass_count = 0;\n\n  ring_counter dut(.clk(clk), .rst(rst), .count(count));\n\n  initial begin\n    clk = 0;\n    forever #5 clk = ~clk;\n  end\n\n  initial begin\n    rst = 1; #12;\n    if (count === 4\'b0001) pass_count = pass_count + 1;\n    rst = 0; #10;\n    if (count === 4\'b0010) pass_count = pass_count + 1;\n    #10;\n    if (count === 4\'b0100) pass_count = pass_count + 1;\n    #10;\n    if (count === 4\'b1000) pass_count = pass_count + 1;\n    #10;\n    if (count === 4\'b0001) pass_count = pass_count + 1;\n    if (pass_count === 5) $display("TESTRESULT PASS 5/5"); else $display("TESTRESULT FAIL %0d/5", pass_count);\n    $finish;\n  end\nendmodule\n',
       top_module: 'ring_counter',
       created_at: now,
     },
@@ -138,10 +195,10 @@ function initInMemoryData() {
       sequence_no: 4,
       title: 'Frequency Divider (Divide by 2)',
       statement_md: 'Design a frequency divider that outputs a clock signal at half the input frequency. The output toggles every input clock edge. Critical in clock generation circuits.\n\n### Input/Output Examples:\n- **Input clock pattern**: `↑↓↑↓↑↓↑↓`\n- **Output clock pattern**: `↑__↑__↑__↑` (half frequency)\n\n### Constraints\n- Module name must be: `freq_div_2`\n- Input ports: `clk_in` (single-bit clock), `rst` (single-bit reset)\n- Output port: `clk_out` (single-bit `reg` output)\n- `clk_out` frequency = `clk_in` / 2 (toggles on every active edge of `clk_in`, initialized or reset to 0 on `rst`)',
-      difficulty: 'hard',
+      difficulty: 'medium',
       points: 100,
       starter_code: 'module freq_div_2(\n    input clk_in,\n    input rst,\n    output reg clk_out\n);\n    // write code here\n\nendmodule\n',
-      testbench_code: 'module freq_div_2_tb;\n  reg clk_in, rst;\n  wire clk_out;\n\n  freq_div_2 dut(.clk_in(clk_in), .rst(rst), .clk_out(clk_out));\n\n  initial begin\n    clk_in = 0;\n    forever #5 clk_in = ~clk_in;\n  end\n\n  initial begin\n    rst = 1; #12;\n    rst = 0; #80;\n    $finish;\n  end\nendmodule\n',
+      testbench_code: 'module freq_div_2_tb;\n  reg clk_in, rst;\n  wire clk_out;\n  integer pass_count = 0;\n  reg init_val;\n\n  freq_div_2 dut(.clk_in(clk_in), .rst(rst), .clk_out(clk_out));\n\n  initial begin\n    clk_in = 0;\n    forever #5 clk_in = ~clk_in;\n  end\n\n  initial begin\n    rst = 1; #12;\n    if (clk_out === 1\'b0) pass_count = pass_count + 1;\n    rst = 0;\n    @(posedge clk_in); #1;\n    init_val = clk_out;\n    @(posedge clk_in); #1;\n    if (clk_out === ~init_val) pass_count = pass_count + 1;\n    @(posedge clk_in); #1;\n    if (clk_out === init_val) pass_count = pass_count + 1;\n    if (pass_count === 3) $display("TESTRESULT PASS 3/3"); else $display("TESTRESULT FAIL %0d/3", pass_count);\n    $finish;\n  end\nendmodule\n',
       top_module: 'freq_div_2',
       created_at: now,
     },
@@ -151,10 +208,10 @@ function initInMemoryData() {
       sequence_no: 5,
       title: 'Bidirectional Shift Register',
       statement_md: 'Design an 8-bit bidirectional shift register. Can shift left or right based on direction signal (`dir`), load parallel data (`load`), or reset to zero (`rst`). Essential for flexible data manipulation.\n\n<div class="circuit-diagram-container" style="margin: 1.25rem 0; background: #0b0f19; border: 1px solid #1e293b; border-radius: 12px; padding: 1.25rem; overflow-x: auto; box-shadow: 0 8px 24px rgba(0,0,0,0.5);"><div style="font-weight: 700; color: #38bdf8; margin-bottom: 0.85rem; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; justify-content: space-between;"><div style="display: flex; align-items: center; gap: 0.5rem;"><span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981;"></span>RTL Logic Schematic: 8-Bit Bidirectional Shift Register (<code style="color: #f43f5e; background: #1e1b4b; padding: 2px 6px; border-radius: 4px;">bidirectional_shift_reg</code>)</div><span style="font-size: 0.75rem; color: #94a3b8; font-weight: normal;">DIR=0: Shift Right | DIR=1: Shift Left | LOAD=1: Parallel Load</span></div><svg viewBox="0 0 1080 470" width="100%" style="min-width: 980px; display: block; font-family: ui-monospace, SFMono-Regular, Consolas, monospace;"><rect x="5" y="5" width="1070" height="460" rx="10" fill="#0f172a" stroke="#334155" stroke-width="2"/><text x="25" y="32" font-size="13" font-weight="bold" fill="#38bdf8">RTL SCHEMATIC ARCHITECTURE: 8-BIT BIDIRECTIONAL SHIFT REGISTER</text><g transform="translate(680, 15)"><rect x="0" y="0" width="385" height="98" rx="8" fill="#1e1b4b" stroke="#6366f1" stroke-width="1.5"/><text x="12" y="20" font-size="11" font-weight="bold" fill="#38bdf8">SHIFT REG BEHAVIORAL EQUATIONS:</text><text x="12" y="38" font-size="10" font-weight="bold" fill="#f43f5e">RST  = 1 : shift_reg &lt;= 8\'b00000000</text><text x="12" y="54" font-size="10" font-weight="bold" fill="#10b981">LOAD = 1 : shift_reg &lt;= parallel_in[7:0]</text><text x="12" y="70" font-size="10" font-weight="bold" fill="#fbbf24">DIR  = 0 : shift_reg &lt;= {serial_in, shift_reg[7:1]}  (Right)</text><text x="12" y="86" font-size="10" font-weight="bold" fill="#38bdf8">DIR  = 1 : shift_reg &lt;= {shift_reg[6:0], serial_in}  (Left)</text></g><g transform="translate(25, 45)"><line x1="0" y1="10" x2="30" y2="10" stroke="#10b981" stroke-width="2.5"/><circle cx="0" cy="10" r="3" fill="#10b981"/><text x="38" y="14" font-size="10" font-weight="bold" fill="#34d399">LOAD (Parallel Select)</text><line x1="0" y1="28" x2="30" y2="28" stroke="#06b6d4" stroke-width="2.5"/><circle cx="0" cy="28" r="3" fill="#06b6d4"/><text x="38" y="32" font-size="10" font-weight="bold" fill="#38bdf8">DIR (0=Right →, 1=Left ←)</text><line x1="0" y1="46" x2="30" y2="46" stroke="#fbbf24" stroke-width="2.5"/><circle cx="0" cy="46" r="3" fill="#fbbf24"/><text x="38" y="50" font-size="10" font-weight="bold" fill="#fcd34d">SERIAL_IN (Shift Bit In)</text><line x1="280" y1="10" x2="310" y2="10" stroke="#6366f1" stroke-width="2.5"/><circle cx="280" cy="10" r="3" fill="#6366f1"/><text x="318" y="14" font-size="10" font-weight="bold" fill="#818cf8">CLK (Clock Edge ↑)</text><line x1="280" y1="28" x2="310" y2="28" stroke="#f43f5e" stroke-width="2.5"/><circle cx="280" cy="28" r="3" fill="#f43f5e"/><text x="318" y="32" font-size="10" font-weight="bold" fill="#fb7185">RST (Sync Reset)</text></g><line x1="25" y1="125" x2="1040" y2="125" stroke="#10b981" stroke-width="3"/><text x="25" y="118" font-size="11" font-weight="bold" fill="#34d399">PARALLEL_IN[7:0] (8-Bit Parallel Input Bus)</text><line x1="25" y1="410" x2="1040" y2="410" stroke="#6366f1" stroke-width="2"/><text x="25" y="405" font-size="10" font-weight="bold" fill="#818cf8">GLOBAL CLK</text><line x1="25" y1="435" x2="1040" y2="435" stroke="#f43f5e" stroke-width="2"/><text x="25" y="430" font-size="10" font-weight="bold" fill="#fb7185">GLOBAL RST</text><line x1="25" y1="150" x2="1040" y2="150" stroke="#10b981" stroke-width="1.5" stroke-dasharray="4,2"/><line x1="25" y1="165" x2="1040" y2="165" stroke="#06b6d4" stroke-width="1.5" stroke-dasharray="4,2"/><path d="M 25 185 L 40 185 L 40 230 L 40 230" stroke="#fbbf24" stroke-width="2" fill="none"/><circle cx="25" cy="185" r="4" fill="#fbbf24"/><text x="30" y="180" font-size="9" font-weight="bold" fill="#fcd34d">SERIAL_IN (Right → Bit 7 MSB)</text><path d="M 1040 185 L 915 185 L 915 250" stroke="#fbbf24" stroke-width="2" fill="none"/><circle cx="1040" cy="185" r="4" fill="#fbbf24"/><text x="1035" y="180" font-size="9" font-weight="bold" fill="#fcd34d" text-anchor="end">SERIAL_IN (Left ← Bit 0 LSB)</text><g transform="translate(40,200)"><line x1="15" y1="-75" x2="15" y2="5" stroke="#10b981" stroke-width="1.5"/><polygon points="0,5 32,12 32,68 0,75" fill="#032b45" stroke="#06b6d4" stroke-width="1.5"/><text x="16" y="44" font-size="9" font-weight="bold" fill="#38bdf8" text-anchor="middle">MUX[7]</text><line x1="32" y1="40" x2="48" y2="40" stroke="#e2e8f0" stroke-width="1.5"/><rect x="48" y="5" width="44" height="70" rx="4" fill="#2d124d" stroke="#a855f7" stroke-width="1.5"/><text x="70" y="35" font-size="10" font-weight="bold" fill="#c084fc" text-anchor="middle">DFF[7]</text><text x="70" y="52" font-size="8" fill="#a7f3d0" text-anchor="middle">Bit 7</text><polygon points="48,60 55,65 48,70" fill="none" stroke="#6366f1" stroke-width="1.5"/><line x1="52" y1="210" x2="52" y2="75" stroke="#6366f1" stroke-width="1.5"/><line x1="78" y1="235" x2="78" y2="75" stroke="#f43f5e" stroke-width="1.5"/><line x1="92" y1="40" x2="92" y2="160" stroke="#10b981" stroke-width="2"/><circle cx="92" cy="40" r="3" fill="#10b981"/><text x="92" y="152" font-size="9" font-weight="bold" fill="#34d399">out[7]</text></g><g transform="translate(165,200)"><line x1="15" y1="-75" x2="15" y2="5" stroke="#10b981" stroke-width="1.5"/><polygon points="0,5 32,12 32,68 0,75" fill="#032b45" stroke="#06b6d4" stroke-width="1.5"/><text x="16" y="44" font-size="9" font-weight="bold" fill="#38bdf8" text-anchor="middle">MUX[6]</text><line x1="32" y1="40" x2="48" y2="40" stroke="#e2e8f0" stroke-width="1.5"/><rect x="48" y="5" width="44" height="70" rx="4" fill="#2d124d" stroke="#a855f7" stroke-width="1.5"/><text x="70" y="35" font-size="10" font-weight="bold" fill="#c084fc" text-anchor="middle">DFF[6]</text><text x="70" y="52" font-size="8" fill="#a7f3d0" text-anchor="middle">Bit 6</text><polygon points="48,60 55,65 48,70" fill="none" stroke="#6366f1" stroke-width="1.5"/><line x1="52" y1="210" x2="52" y2="75" stroke="#6366f1" stroke-width="1.5"/><line x1="78" y1="235" x2="78" y2="75" stroke="#f43f5e" stroke-width="1.5"/><line x1="92" y1="40" x2="92" y2="160" stroke="#10b981" stroke-width="2"/><circle cx="92" cy="40" r="3" fill="#10b981"/><text x="92" y="152" font-size="9" font-weight="bold" fill="#34d399">out[6]</text></g><g transform="translate(290,200)"><line x1="15" y1="-75" x2="15" y2="5" stroke="#10b981" stroke-width="1.5"/><polygon points="0,5 32,12 32,68 0,75" fill="#032b45" stroke="#06b6d4" stroke-width="1.5"/><text x="16" y="44" font-size="9" font-weight="bold" fill="#38bdf8" text-anchor="middle">MUX[5]</text><line x1="32" y1="40" x2="48" y2="40" stroke="#e2e8f0" stroke-width="1.5"/><rect x="48" y="5" width="44" height="70" rx="4" fill="#2d124d" stroke="#a855f7" stroke-width="1.5"/><text x="70" y="35" font-size="10" font-weight="bold" fill="#c084fc" text-anchor="middle">DFF[5]</text><text x="70" y="52" font-size="8" fill="#a7f3d0" text-anchor="middle">Bit 5</text><polygon points="48,60 55,65 48,70" fill="none" stroke="#6366f1" stroke-width="1.5"/><line x1="52" y1="210" x2="52" y2="75" stroke="#6366f1" stroke-width="1.5"/><line x1="78" y1="235" x2="78" y2="75" stroke="#f43f5e" stroke-width="1.5"/><line x1="92" y1="40" x2="92" y2="160" stroke="#10b981" stroke-width="2"/><circle cx="92" cy="40" r="3" fill="#10b981"/><text x="92" y="152" font-size="9" font-weight="bold" fill="#34d399">out[5]</text></g><g transform="translate(415,200)"><line x1="15" y1="-75" x2="15" y2="5" stroke="#10b981" stroke-width="1.5"/><polygon points="0,5 32,12 32,68 0,75" fill="#032b45" stroke="#06b6d4" stroke-width="1.5"/><text x="16" y="44" font-size="9" font-weight="bold" fill="#38bdf8" text-anchor="middle">MUX[4]</text><line x1="32" y1="40" x2="48" y2="40" stroke="#e2e8f0" stroke-width="1.5"/><rect x="48" y="5" width="44" height="70" rx="4" fill="#2d124d" stroke="#a855f7" stroke-width="1.5"/><text x="70" y="35" font-size="10" font-weight="bold" fill="#c084fc" text-anchor="middle">DFF[4]</text><text x="70" y="52" font-size="8" fill="#a7f3d0" text-anchor="middle">Bit 4</text><polygon points="48,60 55,65 48,70" fill="none" stroke="#6366f1" stroke-width="1.5"/><line x1="52" y1="210" x2="52" y2="75" stroke="#6366f1" stroke-width="1.5"/><line x1="78" y1="235" x2="78" y2="75" stroke="#f43f5e" stroke-width="1.5"/><line x1="92" y1="40" x2="92" y2="160" stroke="#10b981" stroke-width="2"/><circle cx="92" cy="40" r="3" fill="#10b981"/><text x="92" y="152" font-size="9" font-weight="bold" fill="#34d399">out[4]</text></g><g transform="translate(540,200)"><line x1="15" y1="-75" x2="15" y2="5" stroke="#10b981" stroke-width="1.5"/><polygon points="0,5 32,12 32,68 0,75" fill="#032b45" stroke="#06b6d4" stroke-width="1.5"/><text x="16" y="44" font-size="9" font-weight="bold" fill="#38bdf8" text-anchor="middle">MUX[3]</text><line x1="32" y1="40" x2="48" y2="40" stroke="#e2e8f0" stroke-width="1.5"/><rect x="48" y="5" width="44" height="70" rx="4" fill="#2d124d" stroke="#a855f7" stroke-width="1.5"/><text x="70" y="35" font-size="10" font-weight="bold" fill="#c084fc" text-anchor="middle">DFF[3]</text><text x="70" y="52" font-size="8" fill="#a7f3d0" text-anchor="middle">Bit 3</text><polygon points="48,60 55,65 48,70" fill="none" stroke="#6366f1" stroke-width="1.5"/><line x1="52" y1="210" x2="52" y2="75" stroke="#6366f1" stroke-width="1.5"/><line x1="78" y1="235" x2="78" y2="75" stroke="#f43f5e" stroke-width="1.5"/><line x1="92" y1="40" x2="92" y2="160" stroke="#10b981" stroke-width="2"/><circle cx="92" cy="40" r="3" fill="#10b981"/><text x="92" y="152" font-size="9" font-weight="bold" fill="#34d399">out[3]</text></g><g transform="translate(665,200)"><line x1="15" y1="-75" x2="15" y2="5" stroke="#10b981" stroke-width="1.5"/><polygon points="0,5 32,12 32,68 0,75" fill="#032b45" stroke="#06b6d4" stroke-width="1.5"/><text x="16" y="44" font-size="9" font-weight="bold" fill="#38bdf8" text-anchor="middle">MUX[2]</text><line x1="32" y1="40" x2="48" y2="40" stroke="#e2e8f0" stroke-width="1.5"/><rect x="48" y="5" width="44" height="70" rx="4" fill="#2d124d" stroke="#a855f7" stroke-width="1.5"/><text x="70" y="35" font-size="10" font-weight="bold" fill="#c084fc" text-anchor="middle">DFF[2]</text><text x="70" y="52" font-size="8" fill="#a7f3d0" text-anchor="middle">Bit 2</text><polygon points="48,60 55,65 48,70" fill="none" stroke="#6366f1" stroke-width="1.5"/><line x1="52" y1="210" x2="52" y2="75" stroke="#6366f1" stroke-width="1.5"/><line x1="78" y1="235" x2="78" y2="75" stroke="#f43f5e" stroke-width="1.5"/><line x1="92" y1="40" x2="92" y2="160" stroke="#10b981" stroke-width="2"/><circle cx="92" cy="40" r="3" fill="#10b981"/><text x="92" y="152" font-size="9" font-weight="bold" fill="#34d399">out[2]</text></g><g transform="translate(790,200)"><line x1="15" y1="-75" x2="15" y2="5" stroke="#10b981" stroke-width="1.5"/><polygon points="0,5 32,12 32,68 0,75" fill="#032b45" stroke="#06b6d4" stroke-width="1.5"/><text x="16" y="44" font-size="9" font-weight="bold" fill="#38bdf8" text-anchor="middle">MUX[1]</text><line x1="32" y1="40" x2="48" y2="40" stroke="#e2e8f0" stroke-width="1.5"/><rect x="48" y="5" width="44" height="70" rx="4" fill="#2d124d" stroke="#a855f7" stroke-width="1.5"/><text x="70" y="35" font-size="10" font-weight="bold" fill="#c084fc" text-anchor="middle">DFF[1]</text><text x="70" y="52" font-size="8" fill="#a7f3d0" text-anchor="middle">Bit 1</text><polygon points="48,60 55,65 48,70" fill="none" stroke="#6366f1" stroke-width="1.5"/><line x1="52" y1="210" x2="52" y2="75" stroke="#6366f1" stroke-width="1.5"/><line x1="78" y1="235" x2="78" y2="75" stroke="#f43f5e" stroke-width="1.5"/><line x1="92" y1="40" x2="92" y2="160" stroke="#10b981" stroke-width="2"/><circle cx="92" cy="40" r="3" fill="#10b981"/><text x="92" y="152" font-size="9" font-weight="bold" fill="#34d399">out[1]</text></g><g transform="translate(915,200)"><line x1="15" y1="-75" x2="15" y2="5" stroke="#10b981" stroke-width="1.5"/><polygon points="0,5 32,12 32,68 0,75" fill="#032b45" stroke="#06b6d4" stroke-width="1.5"/><text x="16" y="44" font-size="9" font-weight="bold" fill="#38bdf8" text-anchor="middle">MUX[0]</text><line x1="32" y1="40" x2="48" y2="40" stroke="#e2e8f0" stroke-width="1.5"/><rect x="48" y="5" width="44" height="70" rx="4" fill="#2d124d" stroke="#a855f7" stroke-width="1.5"/><text x="70" y="35" font-size="10" font-weight="bold" fill="#c084fc" text-anchor="middle">DFF[0]</text><text x="70" y="52" font-size="8" fill="#a7f3d0" text-anchor="middle">Bit 0</text><polygon points="48,60 55,65 48,70" fill="none" stroke="#6366f1" stroke-width="1.5"/><line x1="52" y1="210" x2="52" y2="75" stroke="#6366f1" stroke-width="1.5"/><line x1="78" y1="235" x2="78" y2="75" stroke="#f43f5e" stroke-width="1.5"/><line x1="92" y1="40" x2="92" y2="160" stroke="#10b981" stroke-width="2"/><circle cx="92" cy="40" r="3" fill="#10b981"/><text x="92" y="152" font-size="9" font-weight="bold" fill="#34d399">out[0]</text></g><path d="M 132 240 L 165 230 M 257 240 L 290 230 M 382 240 L 415 230 M 507 240 L 540 230 M 632 240 L 665 230 M 757 240 L 790 230 M 882 240 L 915 230" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="3,2"/><line x1="25" y1="360" x2="1040" y2="360" stroke="#10b981" stroke-width="3"/><text x="25" y="375" font-size="11" font-weight="bold" fill="#34d399">PARALLEL_OUT[7:0] (8-Bit Parallel Output Bus)</text></svg></div>\n\n### Input/Output Examples:\n- **`dir = 0` (Right shift)**: `10110011` with `serial_in = 0` -> `01011001`\n- **`dir = 1` (Left shift)**: `10110011` with `serial_in = 0` -> `01100110`\n- **`load = 1`**: Directly loads `parallel_in` into register\n\n### Constraints\n- Module name must be: `bidirectional_shift_reg`\n- Input ports: `clk`, `rst`, `dir`, `serial_in`, `load`, `parallel_in[7:0]`\n- Output port: `parallel_out[7:0]`\n- `dir = 0`: Shift right (`{serial_in, shift_reg[7:1]}`)\n- `dir = 1`: Shift left (`{shift_reg[6:0], serial_in}`)',
-      difficulty: 'medium',
+      difficulty: 'hard',
       points: 230,
       starter_code: 'module bidirectional_shift_reg(\n    input clk,\n    input rst,\n    input dir,\n    input serial_in,\n    input load,\n    input [7:0] parallel_in,\n    output [7:0] parallel_out\n);\n    reg [7:0] shift_reg;\n    assign parallel_out = shift_reg;\n    \n    // write code here\n    \nendmodule\n',
-      testbench_code: 'module bidirectional_shift_reg_tb;\n  reg clk, rst, dir, serial_in, load;\n  reg [7:0] parallel_in;\n  wire [7:0] parallel_out;\n\n  bidirectional_shift_reg dut(\n    .clk(clk), .rst(rst), .dir(dir),\n    .serial_in(serial_in), .load(load),\n    .parallel_in(parallel_in), .parallel_out(parallel_out)\n  );\n\n  initial begin\n    clk = 0;\n    forever #5 clk = ~clk;\n  end\n\n  initial begin\n    rst = 1; load = 0; dir = 0; serial_in = 0; parallel_in = 8\'b0; #12;\n    rst = 0; load = 1; parallel_in = 8\'b10110011; #10;\n    load = 0; dir = 0; serial_in = 0; #10; // right shift\n    dir = 1; serial_in = 0; #10; // left shift\n    $finish;\n  end\nendmodule\n',
+      testbench_code: 'module bidirectional_shift_reg_tb;\n  reg clk, rst, dir, serial_in, load;\n  reg [7:0] parallel_in;\n  wire [7:0] parallel_out;\n  integer pass_count = 0;\n\n  bidirectional_shift_reg dut(\n    .clk(clk), .rst(rst), .dir(dir),\n    .serial_in(serial_in), .load(load),\n    .parallel_in(parallel_in), .parallel_out(parallel_out)\n  );\n\n  initial begin\n    clk = 0;\n    forever #5 clk = ~clk;\n  end\n\n  initial begin\n    rst = 1; load = 0; dir = 0; serial_in = 0; parallel_in = 8\'b0; #12;\n    if (parallel_out === 8\'b00000000) pass_count = pass_count + 1;\n    rst = 0; load = 1; parallel_in = 8\'b10110011; #10;\n    if (parallel_out === 8\'b10110011) pass_count = pass_count + 1;\n    load = 0; dir = 0; serial_in = 0; #10;\n    if (parallel_out === 8\'b01011001) pass_count = pass_count + 1;\n    dir = 1; serial_in = 1; #10;\n    if (parallel_out === 8\'b10110011) pass_count = pass_count + 1;\n    if (pass_count === 4) $display("TESTRESULT PASS 4/4"); else $display("TESTRESULT FAIL %0d/4", pass_count);\n    $finish;\n  end\nendmodule\n',
       top_module: 'bidirectional_shift_reg',
       created_at: now,
     },

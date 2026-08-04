@@ -39,7 +39,7 @@ export default function Login() {
           <input
             value={participantId}
             onChange={(e) => setParticipantId(e.target.value)}
-            placeholder="e.g. iei_2600"
+            placeholder="e.g. IEICCC001 or RIT_1432"
             required
           />
         </label>
