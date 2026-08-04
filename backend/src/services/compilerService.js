@@ -3,18 +3,114 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import os from 'os';
 import { randomUUID } from 'crypto';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+
+const execFileAsync = promisify(execFile);
 
 const docker = new Docker();
 const COMPILER_IMAGE = process.env.COMPILER_IMAGE || 'hdl-contest-iverilog:latest';
 const TIMEOUT_MS = Number(process.env.COMPILER_TIMEOUT_MS || 8000);
 
 export async function runSubmission({ submissionCode, testbenchCode, topModule }) {
+  // Priority 1: Native Icarus Verilog Engine
+  try {
+    const nativeResult = await runNativeIverilog({ submissionCode, testbenchCode, topModule });
+    if (nativeResult) return nativeResult;
+  } catch (err) {
+    console.log('[Compiler] Native Icarus Verilog engine unavailable or errored:', err.message);
+  }
+
+  // Priority 2: Docker Container Engine
   try {
     return await runInDockerContainer({ submissionCode, testbenchCode, topModule });
   } catch (err) {
-    // Docker is unavailable in sandboxed Cloud Run / dev container environments.
-    // Fall back to JS Verilog compiler engine.
+    // Priority 3: Built-in JavaScript Verilog Verification Engine fallback
     return runInJsCompiler({ submissionCode, testbenchCode, topModule });
+  }
+}
+
+async function runNativeIverilog({ submissionCode, testbenchCode, topModule }) {
+  const workDir = await fs.mkdtemp(path.join(os.tmpdir(), 'hdl-iverilog-run-'));
+  const subPath = path.join(workDir, 'submission.v');
+  const tbPath = path.join(workDir, 'testbench.v');
+  const outPath = path.join(workDir, 'sim.vvp');
+
+  try {
+    await fs.writeFile(subPath, submissionCode || '', 'utf8');
+    await fs.writeFile(tbPath, testbenchCode || '', 'utf8');
+
+    // 1. Compile with iverilog
+    let compileOutput = '';
+    try {
+      const { stdout, stderr } = await execFileAsync('iverilog', [
+        '-g2012',
+        '-o', outPath,
+        subPath,
+        tbPath
+      ], { timeout: TIMEOUT_MS });
+      compileOutput = (stdout || '') + (stderr || '');
+    } catch (compileErr) {
+      // If iverilog binary itself isn't installed, throw to let fallback handle it
+      if (compileErr.code === 'ENOENT') {
+        throw compileErr;
+      }
+
+      const errMsg = (compileErr.stdout || '') + '\n' + (compileErr.stderr || '') + '\n' + (compileErr.message || '');
+      const cleanError = errMsg
+        .replace(new RegExp(subPath, 'g'), 'submission.v')
+        .replace(new RegExp(tbPath, 'g'), 'testbench.v')
+        .replace(/Command failed: iverilog.*/g, '')
+        .trim();
+
+      return {
+        verdict: 'compile_error',
+        testsPassed: 0,
+        testsTotal: 0,
+        log: `[Icarus Verilog Compilation Error]\nCompiling submission.v and testbench.v...\n\n${cleanError}`,
+      };
+    }
+
+    // 2. Simulate with vvp
+    let simOutput = '';
+    try {
+      const { stdout, stderr } = await execFileAsync('vvp', [outPath], { timeout: TIMEOUT_MS });
+      simOutput = (stdout || '') + (stderr || '');
+    } catch (simErr) {
+      if (simErr.killed) {
+        return {
+          verdict: 'timeout',
+          testsPassed: 0,
+          testsTotal: 0,
+          log: `[Icarus Verilog Execution Timeout]\nCompiling submission.v and testbench.v...\nCompilation successful.\n[KILLED: Simulation exceeded time limit of ${TIMEOUT_MS}ms]`,
+        };
+      }
+      simOutput = (simErr.stdout || '') + '\n' + (simErr.stderr || '');
+    }
+
+    const cleanSimLog = simOutput
+      .replace(new RegExp(subPath, 'g'), 'submission.v')
+      .replace(new RegExp(tbPath, 'g'), 'testbench.v')
+      .trim();
+
+    const fullLog = `[Icarus Verilog v11.0 Engine Output]\nCompiling submission.v and testbench.v...\nCompilation successful.\nRunning simulation...\n${cleanSimLog}`;
+
+    // Check if testbench produced explicit TESTRESULT line
+    const parsed = parseHarnessOutput(fullLog);
+    if (parsed && (parsed.testsTotal > 0 || parsed.log.includes('TESTRESULT'))) {
+      return parsed;
+    }
+
+    // Verify signal behavior using specialized verifiers
+    const jsResult = runInJsCompiler({ submissionCode, testbenchCode, topModule });
+    return {
+      verdict: jsResult.verdict,
+      testsPassed: jsResult.testsPassed,
+      testsTotal: jsResult.testsTotal,
+      log: `${fullLog}\n\n--- Verification Summary ---\n${jsResult.log}`,
+    };
+  } finally {
+    await fs.rm(workDir, { recursive: true, force: true }).catch(() => {});
   }
 }
 
