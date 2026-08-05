@@ -400,73 +400,77 @@ function simulateDecoder3to8(code) {
 
   const hasOut = norm.includes('out0');
   const hasIn = norm.includes('in');
-  const hasLogic = norm.includes('assign') || norm.includes('always') || norm.includes('case') || norm.includes('if');
 
-  if (!hasOut || !hasIn || !hasLogic) {
+  if (!hasOut || !hasIn) {
     return {
       verdict: 'failed',
       testsPassed: 0,
       testsTotal: 8,
-      log: 'Compiling submission.v and testbench.v...\nCompilation successful.\nRunning simulation...\n[FAIL] Test 1: Outputs out0..out7 are not driven or logic expression is missing.\nTESTRESULT FAIL 0/8',
+      log: 'Compiling submission.v and testbench.v...\nCompilation successful.\nRunning simulation...\n[FAIL] Test 1: Ports in or out0..out7 missing in module.\nTESTRESULT FAIL 0/8',
     };
   }
 
   const evaluateForInput = (inVal) => {
-    const inBin = inVal.toString(2).padStart(3, '0');
-    let outVector = null;
+    const in0 = inVal & 1;
+    const in1 = (inVal >> 1) & 1;
+    const in2 = (inVal >> 2) & 1;
 
-    if (/1\s*<<\s*in/.test(norm) || /8'b1\s*<<\s*in/.test(norm) || /1'b1\s*<<\s*in/.test(norm)) {
-      outVector = 1 << inVal;
+    // 1. Check assign out0 = ..., assign out1 = ...
+    let vector = 0;
+    let foundAssigns = 0;
+    for (let k = 0; k < 8; k++) {
+      const regex = new RegExp(`assign\\s+out${k}\\s*=\\s*([^;]+);`, 'i');
+      const match = code.match(regex);
+      if (match) {
+        foundAssigns++;
+        const rawExpr = match[1].trim();
+        try {
+          const jsExpr = convertDecoderVerilogExprToJs(rawExpr);
+          // eslint-disable-next-line no-new-func
+          const fn = new Function('inVal', 'in0', 'in1', 'in2', `return (${jsExpr});`);
+          const bit = Number(Boolean(fn(inVal, in0, in1, in2)));
+          if (bit) vector |= (1 << k);
+        } catch (_) {}
+      }
+    }
+    if (foundAssigns === 8) {
+      return vector;
     }
 
-    if (outVector === null) {
-      let vector = 0;
-      let evaluatedCount = 0;
-      for (let k = 0; k < 8; k++) {
-        const regex = new RegExp(`assign\\s+out${k}\\s*=\\s*([^;]+);`, 'i');
-        const match = code.match(regex);
-        if (match) {
-          const rawExpr = match[1].trim();
-          try {
-            const jsExpr = convertDecoderVerilogExprToJs(rawExpr);
-            // eslint-disable-next-line no-new-func
-            const fn = new Function('inVal', 'in0', 'in1', 'in2', `return (${jsExpr});`);
-            const in0 = inVal & 1;
-            const in1 = (inVal >> 1) & 1;
-            const in2 = (inVal >> 2) & 1;
-            const bit = Number(Boolean(fn(inVal, in0, in1, in2)));
-            if (bit) vector |= (1 << k);
-            evaluatedCount++;
-          } catch (_) {}
+    // 2. Check shift expression: assign out = 1 << in;
+    if (/assign\s+.*=\s*(1|8'b1|1'b1)\s*<<\s*in/i.test(code)) {
+      return (1 << inVal) & 0xff;
+    }
+
+    // 3. Case statement or if-else
+    if (norm.includes('case') || norm.includes('if')) {
+      const inBin = inVal.toString(2).padStart(3, '0');
+      const caseRegex = new RegExp(`(?:3'b${inBin}|3'd${inVal}|\\b${inVal}\\b)\\s*:\\s*([^;\\n]+)`, 'i');
+      const caseMatch = code.match(caseRegex);
+      if (caseMatch) {
+        const stmt = caseMatch[1];
+        const outBitMatch = stmt.match(/out(\d)\s*=\s*1/i);
+        if (outBitMatch) {
+          return 1 << Number(outBitMatch[1]);
+        }
+        const vecMatch = stmt.match(/8'b([01]{8})/i);
+        if (vecMatch) {
+          return parseInt(vecMatch[1], 2);
         }
       }
-      if (evaluatedCount === 8) {
-        outVector = vector;
-      }
-    }
 
-    if (outVector === null && (norm.includes('case') || norm.includes('if'))) {
-      const binPat = `3'b${inBin}`;
-      const decPat = `3'd${inVal}`;
-      if (norm.includes(binPat) || norm.includes(decPat) || norm.includes(`case (${inVal})`) || norm.includes(`in == ${binPat}`) || norm.includes(`in==${binPat}`)) {
-        outVector = 1 << inVal;
-      }
-    }
-
-    if (outVector === null) {
-      let matches = 0;
-      for (let k = 0; k < 8; k++) {
-        const kb = k.toString(2).padStart(3, '0');
-        if (norm.includes(`3'b${kb}`) || norm.includes(`3'd${k}`) || norm.includes(`out${k}`)) {
-          matches++;
+      const ifRegex = new RegExp(`if\\s*\\(\\s*in\\s*==\\s*3'b${inBin}\\s*\\)\\s*([^;\\n]+)`, 'i');
+      const ifMatch = code.match(ifRegex);
+      if (ifMatch) {
+        const stmt = ifMatch[1];
+        const outBitMatch = stmt.match(/out(\d)\s*=\s*1/i);
+        if (outBitMatch) {
+          return 1 << Number(outBitMatch[1]);
         }
       }
-      if (matches >= 6) {
-        outVector = 1 << inVal;
-      }
     }
 
-    return outVector;
+    return null;
   };
 
   let passed = 0;
@@ -481,8 +485,9 @@ function simulateDecoder3to8(code) {
       passed++;
       logs.push(`[PASS] Test ${inVal + 1} (in=3'b${inBin}) => out${inVal}=1, others=0`);
     } else {
-      const gotBin = gotVector !== null ? gotVector.toString(2).padStart(8, '0') : '00000000';
-      logs.push(`[FAIL] Test ${inVal + 1} (in=3'b${inBin}) => Expected one-hot out${inVal}=1, Got 8'b${gotBin}`);
+      const gotBin = gotVector !== null ? gotVector.toString(2).padStart(8, '0') : 'XXXXXXXX';
+      const expBin = expectedVector.toString(2).padStart(8, '0');
+      logs.push(`[FAIL] Test ${inVal + 1} (in=3'b${inBin}) => Expected 8'b${expBin}, Got 8'b${gotBin}`);
     }
   }
 
@@ -518,14 +523,13 @@ function simulateMux8to1(code) {
 
   const hasY = norm.includes('y');
   const hasSel = norm.includes('sel');
-  const hasLogic = norm.includes('assign') || norm.includes('always') || norm.includes('case') || norm.includes('if');
 
-  if (!hasY || !hasSel || !hasLogic) {
+  if (!hasY || !hasSel) {
     return {
       verdict: 'failed',
       testsPassed: 0,
       testsTotal: 8,
-      log: 'Compiling submission.v and testbench.v...\nCompilation successful.\nRunning simulation...\n[FAIL] Test 1: Output y or select line sel is not driven or logic is missing.\nTESTRESULT FAIL 0/8',
+      log: 'Compiling submission.v and testbench.v...\nCompilation successful.\nRunning simulation...\n[FAIL] Test 1: Output y or select line sel missing in module.\nTESTRESULT FAIL 0/8',
     };
   }
 
@@ -552,14 +556,19 @@ function simulateMux8to1(code) {
       return dArray[selVal];
     }
 
-    const binPat = `3'b${selVal.toString(2).padStart(3, '0')}`;
-    const decPat = `3'd${selVal}`;
-    if (norm.includes(binPat) || norm.includes(decPat) || norm.includes(`case (${selVal})`) || norm.includes(`sel == ${binPat}`) || norm.includes(`sel==${binPat}`)) {
-      return dArray[selVal];
+    const selBin = selVal.toString(2).padStart(3, '0');
+    const casePattern = new RegExp(`(?:3'b${selBin}|3'd${selVal}|\\b${selVal}\\b)\\s*:\\s*y\\s*=\\s*d(\\d)`, 'i');
+    const caseMatch = code.match(casePattern);
+    if (caseMatch) {
+      const dIndex = Number(caseMatch[1]);
+      return dArray[dIndex];
     }
 
-    if (norm.includes('d0') && norm.includes('d7') && norm.includes('sel')) {
-      return dArray[selVal];
+    const ifPattern = new RegExp(`if\\s*\\(\\s*sel\\s*==\\s*3'b${selBin}\\s*\\)\\s*y\\s*=\\s*d(\\d)`, 'i');
+    const ifMatch = code.match(ifPattern);
+    if (ifMatch) {
+      const dIndex = Number(ifMatch[1]);
+      return dArray[dIndex];
     }
 
     return null;
@@ -627,13 +636,12 @@ function simulateRingCounter(code) {
   }
 
   const hasResetInit =
-    norm.includes("4'b0001") ||
-    norm.includes("4'd1") ||
-    norm.includes("4'h1") ||
-    norm.includes("count <= 1") ||
-    norm.includes("count <= 4'b1") ||
-    norm.includes("count <= 4'd1") ||
-    norm.includes("count <= 1'b1");
+    norm.includes("count<=4'b0001") ||
+    norm.includes("count<=4'd1") ||
+    norm.includes("count<=4'h1") ||
+    norm.includes("count<=1") ||
+    norm.includes("count=4'b0001") ||
+    norm.includes("count=1");
 
   if (!hasResetInit) {
     return {
@@ -644,6 +652,29 @@ function simulateRingCounter(code) {
     };
   }
 
+  const isShiftLeftWrap = norm.includes('{count[2:0],count[3]}') || norm.includes('count<<1');
+  const isShiftRightWrap = norm.includes('{count[0],count[3:1]}') || norm.includes('count>>1');
+  const isBinaryCounter = norm.includes('count+1') || norm.includes('count+4\'b1');
+
+  const getNextCount = (curr) => {
+    if (isBinaryCounter) {
+      return (curr + 1) & 0xf;
+    }
+    if (isShiftLeftWrap) {
+      return ((curr << 1) & 0xf) | ((curr >> 3) & 1);
+    }
+    if (isShiftRightWrap) {
+      return ((curr >> 1) & 0xf) | ((curr & 1) << 3);
+    }
+    if (norm.includes('case')) {
+      if (curr === 1) return 2;
+      if (curr === 2) return 4;
+      if (curr === 4) return 8;
+      if (curr === 8) return 1;
+    }
+    return 0;
+  };
+
   const sequence = [
     { name: 'Reset state', rst: 1, expected: 1, bin: '0001' },
     { name: 'Clock 1', rst: 0, expected: 2, bin: '0010' },
@@ -651,17 +682,6 @@ function simulateRingCounter(code) {
     { name: 'Clock 3', rst: 0, expected: 8, bin: '1000' },
     { name: 'Clock 4 (Wrap)', rst: 0, expected: 1, bin: '0001' },
   ];
-
-  const hasShift =
-    norm.includes('{count[2:0], count[3]}') ||
-    norm.includes('{count[0], count[3:1]}') ||
-    norm.includes('count << 1') ||
-    norm.includes('<<') ||
-    norm.includes('count[2:0]');
-  const hasCase = norm.includes('case') && (norm.includes("4'b0001") || norm.includes("4'b0010"));
-  const hasIfElse = norm.includes('if') && (norm.includes("4'b1000") || norm.includes("8"));
-
-  const isValidLogic = hasShift || hasCase || hasIfElse || norm.includes('count');
 
   let passed = 0;
   const logs = ['Compiling submission.v and testbench.v...', 'Compilation successful.', 'Running simulation...'];
@@ -673,15 +693,9 @@ function simulateRingCounter(code) {
     if (step.rst === 1) {
       actualCount = 1;
       currentCount = 1;
-    } else if (isValidLogic) {
-      if (currentCount === 1) currentCount = 2;
-      else if (currentCount === 2) currentCount = 4;
-      else if (currentCount === 4) currentCount = 8;
-      else if (currentCount === 8) currentCount = 1;
-      else currentCount = (currentCount << 1) & 0xf || 1;
-      actualCount = currentCount;
     } else {
-      actualCount = 0;
+      currentCount = getNextCount(currentCount);
+      actualCount = currentCount;
     }
 
     if (actualCount === step.expected) {
@@ -724,18 +738,17 @@ function simulateFreqDiv2(code) {
   }
 
   const hasToggle =
-    norm.includes('~clk_out') ||
-    norm.includes('!clk_out') ||
-    norm.includes('clk_out + 1') ||
-    norm.includes('clk_out <= ~clk_out') ||
-    norm.includes('clk_out <= !clk_out');
+    norm.includes('clk_out<=~clk_out') ||
+    norm.includes('clk_out<=!clk_out') ||
+    norm.includes('clk_out=~clk_out') ||
+    norm.includes('clk_out=!clk_out');
 
   const hasResetInit =
-    norm.includes('clk_out <= 0') ||
-    norm.includes("clk_out <= 1'b0") ||
-    norm.includes("clk_out <= 1'd0") ||
-    norm.includes('clk_out = 0') ||
-    norm.includes("clk_out = 1'b0");
+    norm.includes('clk_out<=0') ||
+    norm.includes("clk_out<=1'b0") ||
+    norm.includes("clk_out<=1'd0") ||
+    norm.includes('clk_out=0') ||
+    norm.includes("clk_out=1'b0");
 
   if (!hasToggle || !hasResetInit) {
     return {
@@ -792,13 +805,13 @@ function simulateFreqDiv2(code) {
 // --- SIMULATOR FOR BIDIRECTIONAL_SHIFT_REG ---
 function simulateBidirectionalShiftReg(code) {
   const cleanCode = code.replace(/\/\/.*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
-  const norm = cleanCode.toLowerCase();
+  const norm = cleanCode.toLowerCase().replace(/\s+/g, '');
 
-  const hasReg = /\bshift_reg\b/.test(norm) || /\bparallel_out\b/.test(norm);
-  const hasClk = /\bclk\b/.test(norm);
-  const hasRst = /\brst\b/.test(norm);
-  const hasDir = /\bdir\b/.test(norm);
-  const hasLoad = /\bload\b/.test(norm);
+  const hasReg = norm.includes('shift_reg') || norm.includes('parallel_out');
+  const hasClk = norm.includes('clk');
+  const hasRst = norm.includes('rst');
+  const hasDir = norm.includes('dir');
+  const hasLoad = norm.includes('load');
 
   if (!hasReg || !hasClk || !hasRst || !hasDir || !hasLoad) {
     return {
@@ -809,17 +822,17 @@ function simulateBidirectionalShiftReg(code) {
     };
   }
 
-  const hasShiftLogic =
-    />>|<<|\{|\bshift_reg\b|\bparallel_out\b/.test(norm);
-  const hasLoadLogic =
-    /\bparallel_in\b/.test(norm) && (/\bload\b/.test(norm) || /\brst\b/.test(norm));
+  const hasResetLogic = norm.includes('if(rst)') && (norm.includes('shift_reg<=0') || norm.includes('shift_reg<=8\'b0') || norm.includes('parallel_out<=0'));
+  const hasLoadLogic = (norm.includes('if(load)') || norm.includes('elseif(load)')) && norm.includes('parallel_in');
+  const hasRightShift = norm.includes('shift_reg>>1') || norm.includes('{serial_in,shift_reg[7:1]}') || norm.includes('{serial_in,parallel_out[7:1]}');
+  const hasLeftShift = norm.includes('shift_reg<<1') || norm.includes('{shift_reg[6:0],serial_in}') || norm.includes('{parallel_out[6:0],serial_in}');
 
-  if (!hasShiftLogic || !hasLoadLogic) {
+  if (!hasResetLogic || !hasLoadLogic || !hasRightShift || !hasLeftShift) {
     return {
       verdict: 'failed',
       testsPassed: 0,
       testsTotal: 5,
-      log: 'Compiling submission.v and testbench.v...\nCompilation successful.\nRunning simulation...\n[FAIL] Test 1: Shift logic (<< / >> or concatenation) or parallel load logic missing.\nTESTRESULT FAIL 0/5',
+      log: 'Compiling submission.v and testbench.v...\nCompilation successful.\nRunning simulation...\n[FAIL] Test 1: Incomplete shift register logic. Must support rst=1 (clear), load=1 (parallel_in), dir=0 (right shift with serial_in at MSB), dir=1 (left shift with serial_in at LSB).\nTESTRESULT FAIL 0/5',
     };
   }
 
@@ -1145,8 +1158,36 @@ function simulateTrafficFsm(code) {
 
 function simulateGenericModule(code) {
   const norm = code.toLowerCase().replace(/\s+/g, ' ');
-  const hasLogic = norm.includes('assign') || norm.includes('always') || norm.includes('<=') || norm.includes('=');
 
+  // Extract output ports
+  const portMatch = code.match(/module\s+[a-zA-Z0-9_]+\s*\(([\s\S]*?)\);/);
+  const outputPorts = [];
+  if (portMatch) {
+    const portDefs = portMatch[1].split(',');
+    for (const p of portDefs) {
+      const pClean = p.trim();
+      if (pClean.startsWith('output')) {
+        const name = pClean.split(/\s+/).pop().replace(/;/, '');
+        outputPorts.push(name);
+      }
+    }
+  }
+
+  if (outputPorts.length > 0) {
+    for (const outP of outputPorts) {
+      const isDriven = new RegExp(`(assign\\s+${outP}|\\b${outP}\\s*<=|\\b${outP}\\s*=)`).test(code);
+      if (!isDriven) {
+        return {
+          verdict: 'failed',
+          testsPassed: 0,
+          testsTotal: 3,
+          log: `Compiling submission.v and testbench.v...\nCompilation successful.\nRunning simulation...\n[FAIL] Test 1: Output port '${outP}' is never assigned or driven.\nTESTRESULT FAIL 0/3`,
+        };
+      }
+    }
+  }
+
+  const hasLogic = norm.includes('assign') || norm.includes('always') || norm.includes('<=') || norm.includes('=');
   if (!hasLogic) {
     return {
       verdict: 'failed',
