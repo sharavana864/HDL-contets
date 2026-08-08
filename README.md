@@ -227,5 +227,7 @@ endmodule
 
 ## 📄 License
 
-Distributed under the **MIT License**. See `LICENSE` for more information.
+Copyright © 2026 Sharavana Kumar. All Rights Reserved.
+This project is publicly available for viewing and educational/reference purposes only.
+Any use, reproduction, modification, distribution, or commercial use requires prior written permission from the author.
 
